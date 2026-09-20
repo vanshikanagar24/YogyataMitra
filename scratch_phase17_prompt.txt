@@ -1,0 +1,1346 @@
+<USER_REQUEST>
+PHASE 17 — AUTOMATED QA, FULL-SYSTEM VERIFICATION & REGRESSION HARDENING
+
+PROJECT: YogyataMitra
+CANONICAL ROOT: D:\YogyataMitra
+
+============================================================
+0. PHASE 17 PURPOSE
+============================================================
+
+Phase 17 is a QUALITY ASSURANCE, REGRESSION, FAILURE-RECOVERY,
+SECURITY, ACCESSIBILITY, AND FULL-SYSTEM VERIFICATION phase.
+
+This phase does NOT introduce a new product capability.
+
+The objective is to prove that the complete YogyataMitra system built
+through Phase 16 works correctly as one integrated platform.
+
+The verification scope includes:
+
+Phase 0
+through
+Phase 16
+
+including:
+
+- architecture
+- database
+- migrations
+- deterministic AST
+- deterministic evaluator
+- statutory policy versions
+- explainability
+- audit
+- APIs
+- citizen journey
+- evidence workflow
+- frontend
+- bilingual UI
+- accessibility
+- officer portal
+- human verification
+- authentication/RBAC
+- AI policy discovery
+- controlled policy authoring
+- deterministic compilation
+- policy staging isolation
+
+============================================================
+1. NON-NEGOTIABLE REPOSITORY BOUNDARY
+============================================================
+
+Work ONLY inside:
+
+D:\YogyataMitra
+
+NEVER:
+
+- inspect D:\YogyataMitra-main
+- modify D:\YogyataMitra-main
+- copy from D:\YogyataMitra-main
+- import from D:\YogyataMitra-main
+- compare source code against D:\YogyataMitra-main
+- merge anything from D:\YogyataMitra-main
+
+The legacy directory remains completely outside the project.
+
+============================================================
+2. NO NEW PRODUCT FEATURES
+============================================================
+
+Phase 17 is verification and hardening only.
+
+Do NOT introduce:
+
+- new government schemes
+- new statutory rules
+- new PolicyVersions
+- new eligibility logic
+- new AST nodes
+- new evaluator semantics
+- new AI providers
+- new policy-authoring capabilities
+- new citizen features
+- new officer workflows
+- new authentication architecture
+- production Government SSO
+- automatic policy activation
+- policy publication
+- OCR
+- document AI
+- payment integration
+- external production integrations
+
+If a defect requires a product-level architectural change beyond a small
+safe QA fix, STOP and report it instead of silently expanding scope.
+
+============================================================
+3. AUTHORITATIVE CURRENT SYSTEM STATE
+============================================================
+
+Exactly two statutory schemes exist:
+
+1. PM-KISAN
+2. Sukanya Samriddhi Yojana
+
+Exactly six authoritative policy versions exist:
+
+PM-KISAN:
+- v1.0-2018
+- v2.0-2019
+- v3.0-2023
+
+SSY:
+- v1.0-2016
+- v2.0-2019
+- v3.0-2024
+
+Their canonical hashes MUST remain unchanged.
+
+PM-KISAN v1.0-2018:
+facc14b3388802e3d0ef0c4134414459500dc9a9be7e0dc62ddecc082b47e9d2
+
+PM-KISAN v2.0-2019:
+55fe76d5bd441cbe4a0ceddb45ddbf253f5f059683570bd29096bf9b972ad6d8
+
+PM-KISAN v3.0-2023:
+7ef27f5c071a8fa4fff2d95c6c34cda5211b76d16ddb0e610a312ea61cf669d6
+
+SSY v1.0-2016:
+ffb3c2dae2cf283d3b0b41c8dfd87267cfff29e30fa898ee1ca93fde19419ae7
+
+SSY v2.0-2019:
+3dbd7d9d1f87ae7ce5064143333bd8ac969b14e927ac6cb7e6206f1777288669
+
+SSY v3.0-2024:
+5fa83b3d5b0177ca9d0983e46213d11e92883993f2f7a5abc9fe43fb25b9ff28
+
+No Phase 17 test or fixture may alter these hashes.
+
+============================================================
+4. FIRST STEP — ESTABLISH BASELINE
+============================================================
+
+Before changing any code:
+
+1. Run the full backend suite.
+2. Run the full frontend suite.
+3. Run all Playwright suites.
+4. Run production frontend build.
+5. Run Alembic check.
+6. Capture current migration head.
+7. Query the six policy versions.
+8. Capture their hashes.
+9. Capture scheme count.
+10. Capture PolicyVersion count.
+11. Capture RuleSet count.
+12. Verify current Docker/database state.
+13. Verify current API health.
+14. Verify current frontend startup/build status.
+
+Record this as:
+
+PHASE 17 BASELINE
+
+Do NOT continue if the baseline already contains unexplained failures.
+
+Report baseline failures separately.
+
+============================================================
+5. FULL BACKEND REGRESSION
+============================================================
+
+Run:
+
+pytest backend/tests -v
+
+Expected:
+
+- all existing tests pass
+- no unexplained failures
+- no unexpected skips
+
+Do NOT selectively run only Phase 17 tests.
+
+The final report must provide:
+
+TOTAL BACKEND:
+X passed
+X failed
+X skipped
+
+Also provide test counts by major subsystem:
+
+- database/config
+- models
+- migrations
+- AST
+- evaluator
+- statutory rulesets
+- explainability/audit
+- APIs
+- journey
+- officer portal
+- policy discovery
+- policy authoring
+
+============================================================
+6. FULL FRONTEND REGRESSION
+============================================================
+
+Run the complete frontend test suite.
+
+Verify:
+
+- all unit/component tests pass
+- all i18n tests pass
+- all accessibility-related tests pass
+- all citizen tests pass
+- all officer tests pass
+- all policy discovery tests pass
+- all policy authoring tests pass
+
+Report exact totals.
+
+============================================================
+7. FULL PLAYWRIGHT SUITE
+============================================================
+
+Run ALL existing Playwright/E2E suites.
+
+Do not run only the Phase 16 suite.
+
+Include all existing flows, such as:
+
+- citizen journey
+- bilingual navigation
+- PM-KISAN
+- SSY
+- route coverage
+- officer portal
+- policy discovery
+- policy authoring
+- accessibility-related browser checks where present
+
+Report:
+
+TOTAL PLAYWRIGHT:
+X passed
+X failed
+
+List every suite executed.
+
+============================================================
+8. MASTER CITIZEN JOURNEY E2E
+============================================================
+
+Create/verify one complete end-to-end citizen journey.
+
+The scenario must cover:
+
+HOME
+↓
+SCHEME DISCOVERY
+↓
+SCHEME DETAIL
+↓
+ELIGIBILITY
+↓
+FACTS
+↓
+CLAIMS
+↓
+EVIDENCE
+↓
+VERIFICATION
+↓
+EVALUATION
+↓
+RESULT
+↓
+WHY RESULT
+↓
+POLICY/SOURCE
+↓
+HISTORY
+
+Use a synthetic test citizen.
+
+Do NOT use real personal data.
+
+Verify:
+
+- claims remain distinct from evidence
+- evidence verification does not mutate factual claims
+- deterministic evaluation is invoked
+- result matches expected fixture
+- explainability matches evaluation
+- policy provenance is displayed
+- history displays the persisted evaluation
+- no internal IDs leak into citizen UI
+
+============================================================
+9. MASTER OFFICER JOURNEY E2E
+============================================================
+
+Verify:
+
+OFFICER LOGIN
+↓
+OFFICER DASHBOARD
+↓
+CASE QUEUE
+↓
+CASE REVIEW
+↓
+CLAIMS
+↓
+EVIDENCE
+↓
+VERIFICATION
+↓
+EVALUATION
+↓
+AUDIT/HISTORY
+
+Verify RBAC.
+
+Test at least:
+
+- anonymous user
+- citizen
+- officer
+- supervisor
+
+Each must receive only the access permitted by the existing RBAC model.
+
+Do not change RBAC architecture during this phase.
+
+============================================================
+10. MASTER POLICY GOVERNANCE E2E
+============================================================
+
+Verify the complete Phase 15 + Phase 16 governance chain:
+
+POLICY SOURCE
+↓
+AI DISCOVERY CANDIDATE
+↓
+HUMAN REVIEW
+↓
+APPROVED CANDIDATE
+↓
+POLICY DRAFT
+↓
+HUMAN AUTHORING
+↓
+AST VALIDATION
+↓
+COMPILATION
+↓
+TEST GENERATION
+↓
+REGRESSION TEST
+↓
+SUPERVISORY REVIEW
+↓
+STAGED
+↓
+STOP
+
+Verify:
+
+STAGED ≠ ACTIVE
+
+After staging:
+
+- PolicyVersion count unchanged
+- six hashes unchanged
+- active RuleSet unchanged
+- citizen evaluation unchanged
+- no automatic activation
+- no public exposure of draft internals
+
+============================================================
+11. ALL FIVE ELIGIBILITY OUTCOMES
+============================================================
+
+Verify the system correctly represents all five outcomes:
+
+1. ELIGIBLE
+2. INELIGIBLE
+3. INSUFFICIENT_INFORMATION
+4. VERIFICATION_REQUIRED
+5. MANUAL_REVIEW_REQUIRED
+
+For each outcome verify:
+
+- API representation
+- frontend representation
+- bilingual text
+- citizen-friendly explanation
+- next action
+- no incorrect conversion to another outcome
+
+Do not change deterministic policy semantics to make tests pass.
+
+============================================================
+12. STRONG KLEENE REGRESSION
+============================================================
+
+Verify:
+
+TRUE
+FALSE
+UNKNOWN
+
+and:
+
+AND
+OR
+NOT
+
+according to existing Strong Kleene semantics.
+
+Test missing facts separately from explicit null values.
+
+Verify that:
+
+UNKNOWN
+
+is never silently converted to:
+
+FALSE
+
+or:
+
+TRUE
+
+unless the existing AST semantics explicitly require it.
+
+============================================================
+13. POLICY DATE REGRESSION
+============================================================
+
+Test policy selection around all six policy boundaries.
+
+For each policy transition verify:
+
+day before
+exact boundary
+day after
+
+Verify correct policy selection based on:
+
+scheme
+evaluation_date
+
+Do NOT infer current policy merely from database insertion order.
+
+Verify historical evaluations remain tied to their recorded policy
+version/hash/date/input snapshot.
+
+============================================================
+14. PM-KISAN REGRESSION MATRIX
+============================================================
+
+Verify the existing approved rules.
+
+At minimum test:
+
+- historical ≤2 hectare rule in v1.0-2018
+- no current ≤2 hectare restriction in v2/v3
+- 01-Feb-2019 landownership cutoff
+- qualifying inheritance after cutoff
+- non-qualifying post-cutoff purchase
+- non-qualifying post-cutoff partition among living co-owners
+- applicable exclusion categories
+- NRI handling exactly according to the approved policy version
+- missing facts
+- UNKNOWN propagation
+
+Do not invent additional PM-KISAN policy.
+
+============================================================
+15. SSY REGRESSION MATRIX
+============================================================
+
+Verify:
+
+- age below 10 at account opening
+- exactly age 10 at account opening
+- above age 10 at account opening
+- one account per girl child
+- family account limit
+- multiple-birth exception
+- guardian requirement
+- grandparent distinction
+- missing facts
+- UNKNOWN propagation
+
+Keep eligibility separate from deposit/procedural information.
+
+Do not introduce new statutory interpretation.
+
+============================================================
+16. EVIDENCE / VERIFICATION REGRESSION
+============================================================
+
+Verify:
+
+CLAIM
+≠
+EVIDENCE
+≠
+VERIFICATION
+
+Test:
+
+1. Claim created.
+2. Evidence attached.
+3. Evidence marked VERIFIED.
+4. Claim remains unchanged.
+5. Evaluation remains determined by facts/evaluator.
+6. Evidence marked REJECTED.
+7. Claim remains unchanged.
+8. Evaluation does not automatically mutate.
+
+Verify verification records are correctly audited.
+
+============================================================
+17. JOURNEY STATE MACHINE REGRESSION
+============================================================
+
+Verify all existing valid transitions.
+
+Verify invalid transitions fail.
+
+Specifically verify:
+
+COMPLETED is terminal.
+
+No arbitrary state jumps.
+
+Every transition creates an audit event.
+
+Test:
+
+- normal journey
+- invalid transition
+- repeated transition
+- terminal transition
+- unauthorized transition
+
+============================================================
+18. POLICY DISCOVERY REGRESSION
+============================================================
+
+Verify Phase 15 guarantees:
+
+- AI provider abstraction
+- explicit mock configuration
+- no silent real-provider → mock fallback
+- provider failure produces an explicit failure
+- source excerpt preserved verbatim
+- adversarial content flagged
+- provenance statuses preserved
+- complete ten-class taxonomy
+- human review required
+- approved candidate required before authoring import
+
+Verify source text cannot become executable instructions.
+
+============================================================
+19. POLICY AUTHORING REGRESSION
+============================================================
+
+Verify Phase 16 guarantees:
+
+- only approved candidate can be imported
+- human authoring required
+- existing AST used
+- no secondary DSL
+- canonical hashing
+- deterministic compilation
+- generated tests
+- regression testing
+- author ≠ supervisor reviewer
+- supervisor-only staging
+- staged ≠ active
+- no automatic PolicyVersion creation
+
+Verify draft revisions and audit events.
+
+============================================================
+20. SECURITY REGRESSION
+============================================================
+
+Perform a complete security scan.
+
+Search changed and relevant application code for:
+
+eval(
+exec(
+compile(
+__import__
+importlib
+subprocess
+os.system
+shell=True
+
+Also scan for:
+
+- unsafe deserialization
+- raw SQL interpolation
+- hardcoded credentials
+- hardcoded secrets
+- JWT fallback secrets
+- password literals
+- API keys
+- wildcard CORS
+- insecure cookie configuration
+- path traversal
+- SSRF
+- IDOR
+- privilege escalation
+- client-controlled authorization
+- client-controlled actor identity
+- client-controlled reviewer identity
+- client-controlled state
+- client-controlled hashes
+
+Report actual findings.
+
+Do not merely say "security checked."
+
+============================================================
+21. AUTHENTICATION / RBAC REGRESSION
+============================================================
+
+Verify:
+
+Unauthenticated:
+- cannot access officer APIs
+- cannot access officer UI
+
+Citizen:
+- cannot access officer APIs
+- cannot access policy discovery
+- cannot access policy authoring
+
+Officer:
+- can access permitted officer workflows
+- cannot perform supervisor-only staging
+
+Supervisor:
+- can perform supervisor-only actions
+
+Author:
+- cannot stage own draft
+
+Do not create a second authentication implementation.
+
+============================================================
+22. API ERROR REGRESSION
+============================================================
+
+Verify expected behavior for:
+
+400
+401
+403
+404
+409
+422
+500
+
+Verify:
+
+- structured errors
+- no stack traces
+- no secrets
+- no database credentials
+- no internal filesystem paths
+- no raw exception objects
+
+Test malformed payloads.
+
+Test missing IDs.
+
+Test nonexistent IDs.
+
+Test invalid state transitions.
+
+Test unauthorized actions.
+
+============================================================
+23. PRIVACY REGRESSION
+============================================================
+
+Search logs, responses, frontend DOM, and relevant code for accidental
+exposure of:
+
+- Aadhaar numbers
+- bank account numbers
+- phone numbers
+- email addresses
+- raw citizen PII
+- passwords
+- JWT secrets
+- internal authentication credentials
+
+Do not use real PII in tests.
+
+Verify synthetic fixtures are clearly synthetic.
+
+============================================================
+24. CITIZEN UI TECHNICAL-LEAK REGRESSION
+============================================================
+
+Scan citizen-facing pages for leakage of:
+
+- UUIDs
+- evaluation IDs
+- ruleset IDs
+- draft IDs
+- candidate IDs
+- raw SHA-256 hashes
+- AST JSON
+- raw fact paths
+- internal enum names
+- technical audit metadata
+- internal database terminology
+
+Citizen policy transparency must remain human-readable.
+
+Technical officer/auditor information must remain isolated.
+
+============================================================
+25. BILINGUAL REGRESSION
+============================================================
+
+Verify English/Hindi parity.
+
+Check:
+
+- identical translation-key sets
+- no empty translations
+- no untranslated technical placeholders
+- interpolation token parity
+- major citizen workflows in both languages
+- officer workflows in both languages where implemented
+
+Run automated i18n tests.
+
+============================================================
+26. ACCESSIBILITY REGRESSION
+============================================================
+
+Perform an accessibility-oriented regression across critical pages.
+
+Verify:
+
+- keyboard navigation
+- visible focus
+- skip link
+- semantic headings
+- labels
+- form errors
+- dialogs
+- keyboard-accessible menus
+- keyboard-accessible rule builder
+- no color-only status
+- reduced-motion support
+- adequate touch targets
+- readable Hindi text
+- focus trapping where appropriate
+
+Do NOT claim formal WCAG certification.
+
+Use:
+
+"WCAG 2.2 AA-oriented accessibility verification."
+
+============================================================
+27. RESPONSIVE UI REGRESSION
+============================================================
+
+Verify at:
+
+320px
+375px
+390px
+768px
+1024px
+1280px
+1440px
+
+Check:
+
+- no horizontal overflow
+- navbar
+- hero
+- scheme cards
+- citizen journey
+- result
+- officer dashboard
+- policy authoring
+- rule builder
+- diff viewer
+- review page
+
+============================================================
+28. LOADING / ERROR / EMPTY STATES
+============================================================
+
+Test:
+
+- slow API
+- failed API
+- empty scheme result
+- empty journey
+- missing evidence
+- missing claims
+- failed evaluation
+- failed policy discovery provider
+- failed policy compilation
+- failed policy test
+- unauthorized response
+- expired/invalid session
+
+UI must show understandable recovery actions.
+
+Do not display raw backend exceptions.
+
+============================================================
+29. NETWORK / RESILIENCE TESTING
+============================================================
+
+Test critical frontend flows under:
+
+- delayed API response
+- API timeout
+- 500 response
+- 404 response
+- 409 response
+- network disconnect
+
+Verify:
+
+- no corrupted client state
+- no duplicate submissions where preventable
+- no accidental repeated state transitions
+- no misleading success messages
+
+============================================================
+30. DATABASE INTEGRITY
+============================================================
+
+Verify:
+
+- foreign keys
+- constraints
+- indexes
+- enum integrity
+- migration head
+- Alembic check
+- no orphaned records from normal workflows
+- transaction rollback behavior
+
+Do not delete production-like data merely to make tests pass.
+
+============================================================
+31. TRANSACTION / FAILURE RECOVERY
+============================================================
+
+Test failure in the middle of:
+
+- journey creation
+- evidence verification
+- evaluation
+- policy candidate import
+- policy compilation
+- policy test execution
+- policy staging
+
+Verify partial failures do not leave inconsistent state.
+
+Where transactions are expected, confirm rollback.
+
+============================================================
+32. CONCURRENCY / DUPLICATE ACTIONS
+============================================================
+
+Where practical, test repeated/concurrent:
+
+- evaluation submission
+- evidence verification
+- journey transition
+- policy transition
+- policy staging
+
+Verify no duplicate state corruption.
+
+Do not introduce a new locking architecture unless a real defect is
+found.
+
+If a limitation remains, document it.
+
+============================================================
+33. PERFORMANCE REGRESSION
+============================================================
+
+Measure representative endpoints.
+
+At minimum:
+
+GET /health
+GET /health/db
+GET /api/v1/schemes
+GET scheme detail
+GET policies
+POST evaluation
+GET journey
+Officer dashboard
+Policy discovery list
+Policy authoring draft detail
+Policy compilation/test endpoint
+
+Run multiple repetitions.
+
+Report:
+
+min
+average
+max
+
+Check for obvious N+1 queries.
+
+Do not optimize blindly.
+
+If performance remains within the existing Phase 10 baseline envelope,
+report that.
+
+If there is a material regression, investigate before approval.
+
+============================================================
+34. FRONTEND BUILD / STATIC ANALYSIS
+============================================================
+
+Run:
+
+npm test
+npm run build
+
+Also run existing lint/type checks.
+
+Verify:
+
+- no TypeScript errors
+- no build errors
+- no broken routes
+- no missing imports
+- no untranslated keys
+- no unexpected console errors during E2E
+
+============================================================
+35. PRODUCTION CONFIGURATION AUDIT
+============================================================
+
+Inspect:
+
+.env.example
+Docker configuration
+database configuration
+CORS
+JWT configuration
+password hashing
+logging
+API docs configuration
+frontend environment variables
+
+Verify:
+
+- no secrets committed
+- production secret required
+- no insecure default production JWT secret
+- demo users disabled in production
+- no production database credentials committed
+- no wildcard production CORS
+- development-only shortcuts clearly separated
+
+Do not change deployment architecture in this phase.
+
+============================================================
+36. POLICY INTEGRITY SNAPSHOT
+============================================================
+
+At the end of Phase 17, query the database.
+
+Report:
+
+scheme count
+PolicyVersion count
+RuleSet count
+policy hash list
+Alembic head
+
+Expected:
+
+Schemes = 2
+PolicyVersions = 6
+
+All six hashes unchanged.
+
+No new active statutory policy.
+
+============================================================
+37. REGRESSION SNAPSHOT
+============================================================
+
+Produce a final machine-readable verification summary:
+
+BACKEND:
+PASS/FAIL
+
+FRONTEND:
+PASS/FAIL
+
+PLAYWRIGHT:
+PASS/FAIL
+
+BUILD:
+PASS/FAIL
+
+ALEMBIC:
+PASS/FAIL
+
+SECURITY:
+PASS/FAIL
+
+ACCESSIBILITY:
+PASS/FAIL
+
+I18N:
+PASS/FAIL
+
+POLICY INTEGRITY:
+PASS/FAIL
+
+CITIZEN JOURNEY:
+PASS/FAIL
+
+OFFICER JOURNEY:
+PASS/FAIL
+
+POLICY GOVERNANCE:
+PASS/FAIL
+
+PERFORMANCE:
+PASS/FAIL
+
+PRIVACY:
+PASS/FAIL
+
+============================================================
+38. DEFECT CLASSIFICATION
+============================================================
+
+If issues are found, classify them:
+
+BLOCKER
+HIGH
+MEDIUM
+LOW
+INFO
+
+BLOCKER examples:
+
+- active policy changed unexpectedly
+- policy hash changed unexpectedly
+- citizen can bypass officer authorization
+- AI can activate policy
+- staged draft becomes active
+- deterministic evaluator changed unexpectedly
+- data corruption
+- security credential exposure
+
+HIGH examples:
+
+- major journey broken
+- policy history incorrect
+- evidence changes facts
+- authorization bypass
+- severe accessibility failure on critical workflow
+
+MEDIUM:
+
+- important workflow defect with workaround
+
+LOW:
+
+- cosmetic or minor UX issue
+
+INFO:
+
+- documentation/optimization observation
+
+Do not hide failures.
+
+============================================================
+39. SAFE QA FIXES
+============================================================
+
+Small, clearly bounded fixes are allowed if required to make an existing
+tested workflow correct.
+
+Examples:
+
+- broken test fixture
+- incorrect selector
+- missing loading state
+- incorrect error mapping
+- accessibility attribute
+- incorrect translation key
+- deterministic test setup bug
+- harmless validation bug
+
+Any code fix must:
+
+- remain within existing architecture
+- not change statutory policy
+- not change evaluator semantics
+- not add a new feature
+- have a regression test
+- be documented in the final report
+
+If a fix would change architecture or policy semantics:
+
+STOP and report it.
+
+============================================================
+40. NO FALSE PASSING
+============================================================
+
+Never:
+
+- delete failing tests
+- weaken assertions
+- skip tests without explanation
+- modify expected policy results merely to pass
+- alter policy hashes
+- disable security checks
+- disable authentication
+- bypass E2E flows
+- mock away the system under test
+- remove regression cases
+- suppress errors
+
+A test that cannot run must be reported as such.
+
+============================================================
+41. FINAL LEGACY REPOSITORY CHECK
+============================================================
+
+Do NOT inspect D:\YogyataMitra-main to perform this verification.
+
+Only confirm that Phase 17 work remained under:
+
+D:\YogyataMitra
+
+Do not compare contents against the legacy repository.
+
+============================================================
+42. FINAL REPORT REQUIREMENTS
+============================================================
+
+Return a comprehensive final report with:
+
+# PHASE 17 — FINAL QA & SYSTEM VERIFICATION REPORT
+
+1. STATUS
+   READY FOR REVIEW
+   or
+   BLOCKED
+
+2. BASELINE RESULT
+
+3. FULL BACKEND TEST RESULT
+
+4. FULL FRONTEND TEST RESULT
+
+5. FULL PLAYWRIGHT RESULT
+
+6. MASTER CITIZEN JOURNEY RESULT
+
+7. MASTER OFFICER JOURNEY RESULT
+
+8. MASTER POLICY GOVERNANCE RESULT
+
+9. ALL FIVE ELIGIBILITY OUTCOME RESULT
+
+10. STRONG KLEENE RESULT
+
+11. PM-KISAN REGRESSION RESULT
+
+12. SSY REGRESSION RESULT
+
+13. EVIDENCE/VERIFICATION RESULT
+
+14. JOURNEY STATE MACHINE RESULT
+
+15. POLICY DISCOVERY RESULT
+
+16. POLICY AUTHORING RESULT
+
+17. SECURITY RESULT
+
+18. AUTHENTICATION/RBAC RESULT
+
+19. PRIVACY RESULT
+
+20. CITIZEN TECHNICAL-LEAK RESULT
+
+21. BILINGUAL/I18N RESULT
+
+22. ACCESSIBILITY RESULT
+
+23. RESPONSIVE RESULT
+
+24. ERROR/RECOVERY RESULT
+
+25. DATABASE INTEGRITY RESULT
+
+26. CONCURRENCY RESULT
+
+27. PERFORMANCE RESULT
+
+28. BUILD/STATIC ANALYSIS RESULT
+
+29. PRODUCTION CONFIGURATION RESULT
+
+30. POLICY INTEGRITY SNAPSHOT
+
+31. ALEMBIC HEAD
+
+32. TEST COUNTS
+
+33. DEFECTS FOUND
+
+34. FIXES MADE
+
+35. WARNINGS / NON-BLOCKING ITEMS
+
+36. FINAL RECOMMENDATION
+
+============================================================
+43. FINAL ACCEPTANCE CRITERIA
+============================================================
+
+Phase 17 may be reported:
+
+READY FOR REVIEW
+
+ONLY IF:
+
+- full backend suite passes
+- full frontend suite passes
+- full Playwright suite passes
+- build passes
+- migrations are clean
+- security verification passes
+- critical accessibility checks pass
+- bilingual parity passes
+- citizen journey passes
+- officer journey passes
+- policy governance journey passes
+- all five eligibility outcomes remain supported
+- PM-KISAN regression passes
+- SSY regression passes
+- Strong Kleene regression passes
+- evidence/verification separation passes
+- six authoritative policy hashes remain unchanged
+- exactly two schemes remain
+- exactly six authoritative PolicyVersions remain
+- no staged draft becomes active
+- no AI can activate policy
+- no citizen authorization bypass exists
+- no critical privacy/security defect exists
+
+If ANY acceptance criterion fails:
+
+STATUS = BLOCKED
+
+Do not claim READY FOR REVIEW.
+
+============================================================
+44. FINAL PRINCIPLE
+============================================================
+
+Phase 17 is not about adding more features.
+
+It is about proving that everything already built works together.
+
+The system must remain:
+
+DETERMINISTIC
+AUDITABLE
+BILINGUAL
+SECURE
+ACCESSIBLE
+POLICY-VERSIONED
+HUMAN-GOVERNED
+AI-ASSISTED BUT NOT AI-CONTROLLED
+
+The fundamental policy trust chain remains:
+
+SOURCE
+↓
+AI DISCOVERY
+↓
+HUMAN REVIEW
+↓
+POLICY AUTHORING
+↓
+DETERMINISTIC AST
+↓
+COMPILATION
+↓
+TESTING
+↓
+SUPERVISORY REVIEW
+↓
+STAGED
+↓
+[NO ACTIVATION IN THIS PHASE]
+
+Do not expand this boundary.
+
+============================================================
+END OF PHASE 17 PROMPT
+============================================================
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-09-20T11:26:35+05:30.
+</ADDITIONAL_METADATA>

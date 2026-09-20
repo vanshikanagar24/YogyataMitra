@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: yogyatamitra_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-yogyata_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-yogyata_secure_dev_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-yogyatamitra_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-yogyata_admin} -d ${POSTGRES_DB:-yogyatamitra_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
+    name: yogyatamitra_postgres_data

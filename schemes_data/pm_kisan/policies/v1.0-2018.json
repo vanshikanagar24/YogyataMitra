@@ -1,0 +1,118 @@
+{
+  "scheme_code": "PM_KISAN",
+  "policy_version_code": "v1.0-2018",
+  "effective_from": "2018-12-01",
+  "effective_to": "2019-03-31",
+  "source": {
+    "title": "PM-KISAN Operational Guidelines (Original - Small & Marginal Farmers)",
+    "url": "https://pmkisan.gov.in/Documents/OperationalGuidelines.pdf",
+    "reference": "Original Scheme Notification 2018-19",
+    "document_identifier": "PMKISAN-GUIDELINES-2018-SMF"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMKISAN-V1-ROOT",
+    "operator": "AND",
+    "description_en": "PM-KISAN 2018 Historical Scheme Qualification (Small and Marginal Farmers up to 2 Hectares)",
+    "description_hi": "पीएम-किसान 2018 ऐतिहासिक योजना पात्रता (2 हेक्टेयर तक लघु एवं सीमांत किसान)",
+    "source_clause": "Clause 1.1 & 2.1",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-LAND-CULTIVABLE",
+        "operator": "EQ",
+        "field_path": "family.owns_cultivable_land",
+        "expected_value": true,
+        "description_en": "Family must own cultivable land as per official land records",
+        "description_hi": "आधिकारिक भूमि अभिलेखों के अनुसार परिवार के पास कृषि योग्य भूमि का स्वामित्व होना चाहिए",
+        "source_clause": "Clause 2.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-HIST-LAND-CEILING-2HA",
+        "operator": "LTE",
+        "field_path": "family.total_land_area_hectares",
+        "expected_value": 2.0,
+        "description_en": "Historical eligibility: Total cultivable landholding of small and marginal farmer family must not exceed 2.0 hectares",
+        "description_hi": "ऐतिहासिक पात्रता: लघु एवं सीमांत किसान परिवार की कुल कृषि योग्य भूमि 2.0 हेक्टेयर से अधिक नहीं होनी चाहिए",
+        "source_clause": "Clause 1.1 & 2.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-INSTITUTIONAL",
+        "operator": "EQ",
+        "field_path": "family.is_institutional_landholder",
+        "expected_value": false,
+        "description_en": "Beneficiary family must not be an institutional landholder",
+        "description_hi": "लाभार्थी परिवार संस्थागत भूमिधारक नहीं होना चाहिए",
+        "source_clause": "Clause 3(a)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-CONSTITUTIONAL",
+        "operator": "EQ",
+        "field_path": "family.has_constitutional_post_holder",
+        "expected_value": false,
+        "description_en": "No family member may hold or have held a constitutional post",
+        "description_hi": "परिवार का कोई भी सदस्य संवैधानिक पद पर न तो वर्तमान में हो और न ही पूर्व में रहा हो",
+        "source_clause": "Clause 3(b)(i)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-PUBLIC-REPRESENTATIVE",
+        "operator": "EQ",
+        "field_path": "family.has_public_representative",
+        "expected_value": false,
+        "description_en": "No family member may be a former or present Minister, MP, MLA, MLC, Mayor, or District Panchayat Chairperson",
+        "description_hi": "परिवार का कोई सदस्य पूर्व या वर्तमान मंत्री, सांसद, विधायक, विधान परिषद सदस्य, नगर निगम महापौर या जिला पंचायत अध्यक्ष नहीं होना चाहिए",
+        "source_clause": "Clause 3(b)(ii)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-GOVT-EMPLOYEE",
+        "operator": "EQ",
+        "field_path": "family.has_disqualified_government_employee",
+        "expected_value": false,
+        "description_en": "No family member may be a serving or retired officer/employee of Central/State Govt, PSEs, or local bodies (excluding Class IV / Group D / MTS)",
+        "description_hi": "परिवार का कोई सदस्य केंद्र/राज्य सरकार, पीएसयू या स्थानीय निकायों का सेवारत या सेवानिवृत्त अधिकारी/कर्मचारी नहीं होना चाहिए (वर्ग IV / ग्रुप डी / एमटीएस को छोड़कर)",
+        "source_clause": "Clause 3(b)(iii)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-PENSIONER",
+        "operator": "EQ",
+        "field_path": "family.has_pensioner_above_ten_thousand",
+        "expected_value": false,
+        "description_en": "No family member may be a superannuated/retired pensioner receiving Rs. 10,000 or more per month (excluding Class IV / Group D / MTS)",
+        "description_hi": "परिवार का कोई सदस्य 10,000 रुपये या उससे अधिक मासिक पेंशन प्राप्त करने वाला सेवानिवृत्त पेंशनभोगी नहीं होना चाहिए (वर्ग IV / ग्रुप डी / एमटीएस को छोड़कर)",
+        "source_clause": "Clause 3(b)(iv)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-INCOME-TAX",
+        "operator": "EQ",
+        "field_path": "family.has_income_tax_payer",
+        "expected_value": false,
+        "description_en": "No family member may have paid income tax in the last assessment year",
+        "description_hi": "परिवार के किसी भी सदस्य ने पिछले कर निर्धारण वर्ष में आयकर का भुगतान न किया हो",
+        "source_clause": "Clause 3(b)(v)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKISAN-EXCL-PROFESSIONAL",
+        "operator": "EQ",
+        "field_path": "family.has_registered_practicing_professional",
+        "expected_value": false,
+        "description_en": "No family member may be a practicing registered Doctor, Engineer, Lawyer, Chartered Accountant, or Architect",
+        "description_hi": "परिवार का कोई भी सदस्य पेशेवर निकायों के साथ पंजीकृत एवं अभ्यास करने वाला डॉक्टर, इंजीनियर, वकील, चार्टर्ड अकाउंटेंट या वास्तुकार नहीं होना चाहिए",
+        "source_clause": "Clause 3(b)(vi)"
+      }
+    ]
+  },
+  "metadata": {
+    "scheme_generation": "2018_ORIGINAL",
+    "landholding_ceiling_applicable": true,
+    "max_land_area_hectares": 2.0
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "scheme_code": "SSY",
+  "policy_version_code": "v2.0-2019",
+  "effective_from": "2019-12-12",
+  "effective_to": "2024-03-31",
+  "source": {
+    "title": "Sukanya Samriddhi Account Scheme, 2019",
+    "url": "https://www.dea.gov.in/sites/default/files/SukanyaSamriddhiAccountScheme2019.pdf",
+    "reference": "GSR 914(E), Department of Economic Affairs, Ministry of Finance",
+    "document_identifier": "GSR-914E-2019"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "SSY-V2-ROOT",
+    "operator": "AND",
+    "description_en": "Sukanya Samriddhi Account Opening Eligibility (2019 Scheme)",
+    "description_hi": "सुकन्या समृद्धि खाता खोलने की पात्रता (2019 योजना)",
+    "source_clause": "Paragraph 3 & 4",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "SSY-BENEFICIARY-GENDER",
+        "operator": "EQ",
+        "field_path": "beneficiary.gender",
+        "expected_value": "FEMALE",
+        "description_en": "The account beneficiary must be a girl child",
+        "description_hi": "खाते की लाभार्थी एक बालिका (कन्या) होनी चाहिए",
+        "source_clause": "Paragraph 3(1)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "SSY-BENEFICIARY-RESIDENT",
+        "operator": "EQ",
+        "field_path": "beneficiary.is_indian_resident",
+        "expected_value": true,
+        "description_en": "The beneficiary girl child must be a resident citizen of India",
+        "description_hi": "लाभार्थी बालिका भारत की निवासी नागरिक होनी चाहिए",
+        "source_clause": "Paragraph 3(1)"
+      },
+      {
+        "node_type": "temporal",
+        "rule_id": "SSY-AGE-LIMIT-10",
+        "operator": "HAS_NOT_ATTAINED_AGE",
+        "dob_field": "beneficiary.date_of_birth",
+        "as_of_field": "account.opening_date",
+        "age_limit": 10,
+        "description_en": "The girl child must not have attained the age of ten years as of the account opening date",
+        "description_hi": "खाता खोलने की तिथि को बालिका की आयु दस वर्ष पूर्ण नहीं होनी चाहिए",
+        "source_clause": "Paragraph 3(1)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "SSY-ONE-ACCOUNT-PER-CHILD",
+        "operator": "EQ",
+        "field_path": "account.is_first_account_for_child",
+        "expected_value": true,
+        "description_en": "Only one account may be opened in the name of a girl child",
+        "description_hi": "एक बालिका के नाम पर केवल एक ही खाता खोला जा सकता है",
+        "source_clause": "Paragraph 3(2)"
+      },
+      {
+        "node_type": "logical",
+        "rule_id": "SSY-GUARDIAN-ELIGIBILITY",
+        "operator": "OR",
+        "description_en": "The account must be opened by a natural guardian (father/mother) or a court-appointed legal guardian",
+        "description_hi": "खाता प्राकृतिक अभिभावक (माता/पिता) या न्यायालय द्वारा नियुक्त विधिक अभिभावक द्वारा ही खोला जाना चाहिए",
+        "source_clause": "Paragraph 3(1) & 2(d)",
+        "children": [
+          {
+            "node_type": "comparison",
+            "rule_id": "SSY-NATURAL-GUARDIAN",
+            "operator": "EQ",
+            "field_path": "guardian.is_natural_guardian",
+            "expected_value": true,
+            "description_en": "Guardian is the natural guardian (biological or legal adoptive father or mother)",
+            "description_hi": "अभिभावक प्राकृतिक अभिभावक (माता या पिता) हैं",
+            "source_clause": "Paragraph 2(d)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "SSY-LEGAL-GUARDIAN",
+            "operator": "EQ",
+            "field_path": "guardian.is_court_appointed_legal_guardian",
+            "expected_value": true,
+            "description_en": "Guardian is appointed as legal guardian by a competent court of law",
+            "description_hi": "अभिभावक सक्षम न्यायालय द्वारा नियुक्त विधिक अभिभावक हैं",
+            "source_clause": "Paragraph 2(d)"
+          }
+        ]
+      },
+      {
+        "node_type": "logical",
+        "rule_id": "SSY-FAMILY-ACCOUNT-LIMIT",
+        "operator": "OR",
+        "description_en": "Maximum two accounts allowed per family, unless multiple girl children were born in first or subsequent delivery",
+        "description_hi": "एक परिवार में अधिकतम दो खातों की अनुमति है, जब तक कि पहले या बाद के प्रसव में जुड़वां/तिड़वां बालिकाओं का जन्म न हुआ हो",
+        "source_clause": "Paragraph 3(2)",
+        "children": [
+          {
+            "node_type": "comparison",
+            "rule_id": "SSY-FAMILY-ACCOUNTS-UNDER-TWO",
+            "operator": "LT",
+            "field_path": "family.active_ssy_accounts_count",
+            "expected_value": 2,
+            "description_en": "Family has fewer than two existing active Sukanya Samriddhi accounts",
+            "description_hi": "परिवार के पास दो से कम सक्रिय सुकन्या समृद्धि खाते हैं",
+            "source_clause": "Paragraph 3(2)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "SSY-MULTIPLE-BIRTH-EXCEPTION",
+            "operator": "EQ",
+            "field_path": "family.has_multiple_birth_exception",
+            "expected_value": true,
+            "description_en": "Family qualifies for exception due to documented multiple birth (twins/triplets)",
+            "description_hi": "परिवार प्रमाणित जुड़वां/तिड़वां बालिकाओं के जन्म के कारण छूट के लिए अर्हता प्राप्त करता है",
+            "source_clause": "Paragraph 3(2) Proviso"
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "scheme_generation": "2019_SCHEME",
+    "max_age_years": 10,
+    "max_accounts_per_family": 2,
+    "operational_rules": {
+      "minimum_initial_deposit": 250,
+      "minimum_annual_deposit": 250,
+      "maximum_annual_deposit": 150000,
+      "maturity_period_years": 21
+    }
+  }
+}

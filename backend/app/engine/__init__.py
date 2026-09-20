@@ -1,0 +1,131 @@
+"""YogyataMitra Rule AST and Deterministic Evaluation Engine.
+
+Provides strongly-typed declarative AST node specifications, Kleene tri-state
+logic semantics, and a stateless, deterministic evaluator.
+"""
+
+from app.engine.ast import (
+    AggregationNode,
+    AggregationOperator,
+    ASTNodeType,
+    BaseRuleNode,
+    CollectionNode,
+    CollectionOperator,
+    ComparisonNode,
+    ComparisonOperator,
+    ContextOperator,
+    ContextScopeNode,
+    ExistenceNode,
+    ExistenceOperator,
+    LogicalNode,
+    LogicalOperator,
+    RuleASTNode,
+    TemporalNode,
+    TemporalOperator,
+    validate_ast,
+)
+from app.engine.errors import (
+    ASTValidationError,
+    EngineError,
+    EvaluationError,
+    FieldPathResolutionError,
+    InvalidCollectionOperationError,
+    InvalidNodeTypeError,
+    InvalidOperandCountError,
+    InvalidOperandTypeError,
+    InvalidTemporalArgumentError,
+    TypeMismatchError,
+    UnknownOperatorError,
+)
+from app.engine.evaluator import (
+    DeterministicEvaluator,
+    EvaluationContext,
+    EvaluationResult,
+    NodeEvaluationResult,
+)
+from app.engine.explainability import (
+    AUDIT_SCHEMA_VERSION,
+    AuditEvaluationRecord,
+    BlockerCategory,
+    ExplainabilityTrace,
+    ExplainableTraceNode,
+    InformationGapBlocker,
+    InputSnapshot,
+    PolicyProvenance,
+    RuleExplanation,
+    TRACE_SCHEMA_VERSION,
+    TraceBuilder,
+    build_explainability_trace,
+    compute_canonical_rule_hash,
+    compute_input_snapshot_hash,
+    create_audit_evaluation_record,
+    generate_rule_explanation,
+)
+from app.engine.types import (
+    RuleTruthValue,
+    kleene_and,
+    kleene_not,
+    kleene_or,
+)
+
+__all__ = [
+    # Types
+    "RuleTruthValue",
+    "kleene_and",
+    "kleene_or",
+    "kleene_not",
+    # Operators
+    "LogicalOperator",
+    "ComparisonOperator",
+    "ExistenceOperator",
+    "CollectionOperator",
+    "TemporalOperator",
+    "AggregationOperator",
+    "ContextOperator",
+    "ASTNodeType",
+    # Nodes
+    "BaseRuleNode",
+    "LogicalNode",
+    "ComparisonNode",
+    "ExistenceNode",
+    "TemporalNode",
+    "CollectionNode",
+    "AggregationNode",
+    "ContextScopeNode",
+    "RuleASTNode",
+    "validate_ast",
+    # Evaluator
+    "EvaluationContext",
+    "DeterministicEvaluator",
+    "EvaluationResult",
+    "NodeEvaluationResult",
+    # Explainability & Audit
+    "TRACE_SCHEMA_VERSION",
+    "AUDIT_SCHEMA_VERSION",
+    "BlockerCategory",
+    "InformationGapBlocker",
+    "PolicyProvenance",
+    "compute_canonical_rule_hash",
+    "RuleExplanation",
+    "generate_rule_explanation",
+    "ExplainableTraceNode",
+    "ExplainabilityTrace",
+    "TraceBuilder",
+    "build_explainability_trace",
+    "InputSnapshot",
+    "AuditEvaluationRecord",
+    "compute_input_snapshot_hash",
+    "create_audit_evaluation_record",
+    # Errors
+    "EngineError",
+    "ASTValidationError",
+    "InvalidNodeTypeError",
+    "UnknownOperatorError",
+    "InvalidOperandCountError",
+    "InvalidOperandTypeError",
+    "EvaluationError",
+    "FieldPathResolutionError",
+    "TypeMismatchError",
+    "InvalidTemporalArgumentError",
+    "InvalidCollectionOperationError",
+]
