@@ -10,6 +10,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     func,
@@ -21,6 +22,7 @@ from app.models.base import Base
 from app.models.enums import ClaimStatus, EvidenceStatus, VerificationStatus
 
 if TYPE_CHECKING:
+    from app.models.clarification import ClarificationRequest
     from app.models.evaluation import EvaluationTrace
     from app.models.journey import EvaluationJourney
 
@@ -196,6 +198,15 @@ class VerificationRecord(Base):
         DateTime(timezone=True), nullable=True
     )
     details_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    round: Mapped[int] = mapped_column(
+        Integer, default=1, nullable=False
+    )
+    clarification_request_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("clarification_requests.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -206,6 +217,9 @@ class VerificationRecord(Base):
     )
     claim: Mapped[Optional["Claim"]] = relationship(
         "Claim", back_populates="verification_records"
+    )
+    clarification_request: Mapped[Optional["ClarificationRequest"]] = relationship(
+        "ClarificationRequest", foreign_keys=[clarification_request_id]
     )
 
     def __repr__(self) -> str:

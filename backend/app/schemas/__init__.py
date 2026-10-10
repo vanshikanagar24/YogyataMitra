@@ -71,6 +71,17 @@ from app.schemas.api import (
     SchemeDetailResponse,
     SchemeSummaryResponse,
 )
+from app.schemas.clarification import (
+    CitizenClarificationItemResponse,
+    CitizenClarificationListResponse,
+    CitizenClarificationRespondRequest,
+    CitizenReplacementEvidenceInput,
+    CitizenVerificationStatusResponse,
+    OfficerClarificationItemResponse,
+    OfficerClarificationRequestPayload,
+    OfficerVerificationHistoryResponse,
+    OfficerVerificationRecordResponse,
+)
 
 __all__ = [
     "SchemeStatus",

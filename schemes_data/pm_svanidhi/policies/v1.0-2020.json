@@ -1,0 +1,93 @@
+{
+  "scheme_code": "PM_SVANIDHI",
+  "policy_version_code": "v1.0-2020",
+  "effective_from": "2020-06-01",
+  "effective_to": null,
+  "source": {
+    "title": "Scheme Guidelines for PM Street Vendor's AtmaNirbhar Nidhi (PM SVANidhi)",
+    "url": "https://pmsvanidhi.mohua.gov.in/Home/SchemeGuidelines",
+    "reference": "Ministry of Housing and Urban Affairs, Government of India",
+    "document_identifier": "MOHUA-PMSVANIDHI-GUIDELINES-2020"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMSVANIDHI-V1-ROOT",
+    "operator": "AND",
+    "description_en": "PM SVANidhi Statutory Working Capital Loan Eligibility for Street Vendors",
+    "description_hi": "रेहड़ी-पटरी वालों के लिए पीएम स्वनिधि वैधानिक कार्यशील पूंजी ऋण पात्रता",
+    "source_clause": "Guidelines Section 4 & 5",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMSVANIDHI-URBAN-VENDOR",
+        "operator": "EQ",
+        "field_path": "vendor.is_urban_street_vendor",
+        "expected_value": true,
+        "description_en": "Applicant must be engaged in street vending in urban or surrounding peri-urban areas",
+        "description_hi": "आवेदक को शहरी या आसपास के उप-शहरी क्षेत्रों में रेहड़ी-पटरी व्यवसाय में संलग्न होना चाहिए",
+        "source_clause": "Section 4.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMSVANIDHI-MIN-AGE",
+        "operator": "GTE",
+        "field_path": "applicant.age",
+        "expected_value": 18,
+        "description_en": "Street vendor must have attained at least 18 years of age",
+        "description_hi": "रेहड़ी-पटरी वाले की आयु कम से कम 18 वर्ष पूर्ण होनी चाहिए",
+        "source_clause": "Section 4.2"
+      },
+      {
+        "node_type": "logical",
+        "rule_id": "PMSVANIDHI-IDENTIFICATION",
+        "operator": "OR",
+        "description_en": "Street vendor must possess Certificate of Vending, be identified in ULB survey, or hold a Letter of Recommendation",
+        "description_hi": "रेहड़ी-पटरी वाले के पास वेंडिंग प्रमाणपत्र होना चाहिए, यूएलबी सर्वेक्षण में चिन्हित होना चाहिए, या अनुशंसा पत्र होना चाहिए",
+        "source_clause": "Section 4.3",
+        "children": [
+          {
+            "node_type": "comparison",
+            "rule_id": "PMSVANIDHI-ID-CERTIFICATE",
+            "operator": "EQ",
+            "field_path": "vendor.has_vending_certificate",
+            "expected_value": true,
+            "description_en": "Vendor possesses Certificate of Vending or Identity Card issued by Urban Local Body",
+            "description_hi": "विक्रेता के पास शहरी स्थानीय निकाय द्वारा जारी वेंडिंग प्रमाणपत्र या पहचान पत्र है",
+            "source_clause": "Section 4.3(a)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMSVANIDHI-ID-SURVEY",
+            "operator": "EQ",
+            "field_path": "vendor.identified_in_ulb_survey",
+            "expected_value": true,
+            "description_en": "Vendor has been identified in the survey conducted by the Urban Local Body",
+            "description_hi": "विक्रेता को शहरी स्थानीय निकाय द्वारा आयोजित सर्वेक्षण में चिन्हित किया गया है",
+            "source_clause": "Section 4.3(b)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMSVANIDHI-ID-LOR",
+            "operator": "EQ",
+            "field_path": "vendor.has_letter_of_recommendation",
+            "expected_value": true,
+            "description_en": "Vendor possesses a Letter of Recommendation (LoR) issued by the ULB or Town Vending Committee",
+            "description_hi": "विक्रेता के पास यूएलबी या टाउन वेंडिंग कमेटी द्वारा जारी अनुशंसा पत्र (LoR) है",
+            "source_clause": "Section 4.3(c)"
+          }
+        ]
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMSVANIDHI-BANK-ACCOUNT",
+        "operator": "EQ",
+        "field_path": "account.has_active_bank_account",
+        "expected_value": true,
+        "description_en": "Vendor must possess an active bank account for direct disbursement of loan proceeds",
+        "description_hi": "ऋण राशि के सीधे संवितरण के लिए विक्रेता के पास एक सक्रिय बैंक खाता होना चाहिए",
+        "source_clause": "Section 5.1"
+      }
+    ]
+  }
+}

@@ -60,6 +60,7 @@
     "clear_filters": "Clear Filters",
     "pm_kisan_benefit": "₹6,000 per year (Three installments of ₹2,000)",
     "ssy_benefit": "8.2% annual interest & Section 80C tax exemption",
+    "indicative_benefit": "Indicative Statutory Benefit (Presentation Summary)",
     "active_scheme_badge": "Active Statutory Scheme",
     "pm_kisan_category": "Agriculture & Farmers Welfare",
     "ssy_category": "Women & Child Development / Postal Savings",
@@ -249,7 +250,17 @@
     "modal_why_explanation": "Some statutory information may require official documents so that the competent authority can verify the claim during administrative scrutiny. Providing a document does not by itself guarantee eligibility.",
     "modal_doc_ref_label": "Document Reference / Certificate Number:",
     "modal_doc_ref_placeholder": "e.g. Khasra No. 123/4 or Certificate No. ABC-2024",
-    "attach_document_btn": "Attach Document"
+    "attach_document_btn": "Attach Document",
+    "modal_choose_file": "Choose Document",
+    "modal_file_dropzone": "Click or browse to select document from your computer",
+    "modal_file_types": "Accepted formats: PDF, JPG, PNG, DOCX (Max: 10 MB)",
+    "modal_remove_file": "Remove",
+    "modal_upload_cta": "Upload Document",
+    "modal_uploading": "Uploading Document...",
+    "modal_no_file_error": "Please select a document before uploading.",
+    "modal_file_too_large": "File size exceeds the 10 MB limit.",
+    "modal_invalid_type": "Unsupported file format. Please upload PDF, JPG, PNG, or DOCX.",
+    "modal_upload_success": "Evidence document attached successfully (Verification Pending)."
   },
   "audit_page": {
     "title": "Recorded Evaluation History & Verification Inspection",

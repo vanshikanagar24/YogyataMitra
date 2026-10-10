@@ -55,6 +55,22 @@ export async function addJourneyEvidence(
   );
 }
 
+export async function uploadJourneyEvidence(
+  journeyId: string,
+  claimId: string,
+  file: File,
+  evidenceType: string
+): Promise<JourneyEvidence> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("evidence_type", evidenceType);
+
+  return apiClient.upload<JourneyEvidence>(
+    `/journeys/${encodeURIComponent(journeyId)}/claims/${encodeURIComponent(claimId)}/evidence/upload`,
+    formData
+  );
+}
+
 export async function verifyJourneyEvidence(
   journeyId: string,
   evidenceId: string,

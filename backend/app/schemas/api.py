@@ -101,7 +101,7 @@ class FamilyFacts(BaseModel):
     """Family-level facts evaluated by scheme rulesets."""
     owns_cultivable_land: Optional[bool] = Field(None, description="Whether family owns cultivable land")
     total_land_area_hectares: Optional[float] = Field(None, ge=0.0, description="Total cultivable landholding in hectares")
-    is_institutional_landholder: Optional[bool] = Field(None, description="Whether land is held institutionally")
+    is_institutional_landholder: Optional[bool] = Field(None, description="Exclusion: whether land is held institutionally")
     has_constitutional_post_holder: Optional[bool] = Field(None, description="Exclusion: former/present constitutional post")
     has_public_representative: Optional[bool] = Field(None, description="Exclusion: former/present MP/MLA/Mayor/Chairperson")
     has_disqualified_government_employee: Optional[bool] = Field(None, description="Exclusion: serving/retired govt employee")
@@ -113,6 +113,18 @@ class FamilyFacts(BaseModel):
     active_ssy_accounts_count: Optional[int] = Field(None, ge=0, description="Number of active SSY accounts in family")
     has_multiple_birth_exception: Optional[bool] = Field(None, description="Multiple birth exception for third girl child")
     medical_twin_triplet_certificate_available: Optional[bool] = Field(None, description="Medical proof for multiple birth")
+    has_government_employee: Optional[bool] = Field(None, description="Exclusion: any family member in government service")
+    has_professional_tax_payer: Optional[bool] = Field(None, description="Exclusion: any family member pays professional tax")
+    other_member_enrolled: Optional[bool] = Field(None, description="Exclusion: another family member already enrolled")
+    has_prior_housing_benefit: Optional[bool] = Field(None, description="Exclusion: received housing benefit in last 20 years")
+    annual_income: Optional[float] = Field(None, ge=0.0, description="Total annual family income in INR")
+    income_category: Optional[str] = Field(None, description="Income category: EWS, LIG, MIG")
+    has_bpl_or_nfsa_ration_card: Optional[bool] = Field(None, description="Whether family possesses BPL or NFSA ration card")
+    is_bpl: Optional[bool] = Field(None, description="Whether family is Below Poverty Line (BPL)")
+    is_pmjay_beneficiary: Optional[bool] = Field(None, description="Whether family is beneficiary of PM-JAY")
+    has_mgnrega_card: Optional[bool] = Field(None, description="Whether family holds MGNREGA Job Card")
+    is_pmkisan_beneficiary: Optional[bool] = Field(None, description="Whether family is PM-KISAN beneficiary")
+    has_member_earning_above_fifteen_thousand: Optional[bool] = Field(None, description="Exclusion: member earning > Rs 15,000/mo")
 
     model_config = ConfigDict(extra="forbid")
 
@@ -121,7 +133,11 @@ class LandFacts(BaseModel):
     """Land-parcel and transfer facts."""
     transferred_after_cutoff: Optional[bool] = Field(None, description="Whether land was transferred after cut-off date (2019-02-01)")
     acquired_via_succession: Optional[bool] = Field(None, description="Whether land was acquired via succession")
+    acquisition_mode: Optional[str] = Field(None, description="Acquisition mode: SUCCESSION, PURCHASE, PARTITION, etc.")
     previous_owner_deceased: Optional[bool] = Field(None, description="Whether previous landowner is deceased")
+    record_date_valid: Optional[bool] = Field(None, description="Whether land was recorded on or before cut-off date (2019-08-01 for PM-KMY)")
+    irrigated_land_acres: Optional[float] = Field(None, ge=0.0, description="Total irrigated land in acres")
+    total_land_area_hectares: Optional[float] = Field(None, ge=0.0, description="Total cultivable landholding in hectares")
 
     model_config = ConfigDict(extra="forbid")
 
@@ -144,9 +160,93 @@ class GuardianFacts(BaseModel):
 
 
 class AccountFacts(BaseModel):
-    """Account opening facts."""
+    """Account opening and banking facts."""
     opening_date: Optional[date] = Field(None, description="Proposed or actual account opening date")
     is_first_account_for_child: Optional[bool] = Field(None, description="Whether this is the first account for the child")
+    has_active_bank_account: Optional[bool] = Field(None, description="Whether applicant has an active bank account for DBT")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ApplicantFacts(BaseModel):
+    """Applicant-specific demographic and occupational facts."""
+    age: Optional[int] = Field(None, ge=0, le=130, description="Applicant age in completed years")
+    gender: Optional[str] = Field(None, max_length=32, description="Applicant gender (e.g. FEMALE, MALE)")
+    is_small_marginal_farmer: Optional[bool] = Field(None, description="Whether applicant is classified as Small or Marginal Farmer")
+    has_other_pension_scheme: Optional[bool] = Field(None, description="Exclusion: enrolled in NPS, ESIC, EPFO, PM-SYM, PM-LVM")
+    has_other_social_security_pension: Optional[bool] = Field(None, description="Exclusion: in receipt of another social security pension")
+    is_pregnant_or_lactating: Optional[bool] = Field(None, description="Whether applicant is a pregnant woman or lactating mother")
+    is_government_or_psu_employee: Optional[bool] = Field(None, description="Exclusion: regular employee of Central/State Govt or PSU")
+    is_sc_st: Optional[bool] = Field(None, description="Whether applicant belongs to SC or ST category")
+    has_eshram_card: Optional[bool] = Field(None, description="Whether applicant holds an active e-Shram card")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class HouseholdFacts(BaseModel):
+    """Household amenities and deprivation facts."""
+    has_existing_lpg: Optional[bool] = Field(None, description="Whether household already has an LPG connection from any OMC")
+    is_deprived_or_qualifying_category: Optional[bool] = Field(None, description="Whether household satisfies PMUY deprivation/priority criteria")
+    qualifying_category: Optional[str] = Field(None, description="PMUY category: SC_ST, PMAY_G, AAY, MBC, TEA_GARDEN, FOREST_DWELLER, ISLAND, SECC_POOR")
+    has_government_employee: Optional[bool] = Field(None, description="Exclusion: household has regular government employee")
+    owns_motorized_four_wheeler: Optional[bool] = Field(None, description="Exclusion: household owns motorized four-wheeler")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class TradeFacts(BaseModel):
+    """Traditional artisan and craft trade facts."""
+    trade_name: Optional[str] = Field(None, description="Name of the traditional craft/trade")
+    is_eligible_trade: Optional[bool] = Field(None, description="Whether trade is one of the 18 eligible PM Vishwakarma trades")
+    is_self_employed: Optional[bool] = Field(None, description="Whether artisan is self-employed in unorganized sector")
+    has_outstanding_similar_loan: Optional[bool] = Field(None, description="Exclusion: outstanding unpaid loan under PMEGP, MUDRA, or PM SVANidhi")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class HousingFacts(BaseModel):
+    """Housing and residential condition facts."""
+    owns_pucca_house: Optional[bool] = Field(None, description="Exclusion: owns a pucca (all-weather) house anywhere in India")
+    house_type: Optional[str] = Field(None, description="Existing house type: KUTCHA, DILAPIDATED, NONE")
+    number_of_rooms: Optional[int] = Field(None, ge=0, description="Number of rooms in current dwelling")
+    owns_land_for_construction: Optional[bool] = Field(None, description="Whether beneficiary owns land for BLC vertical construction")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class LocationFacts(BaseModel):
+    """Geographical and municipal jurisdiction facts."""
+    is_rural_area: Optional[bool] = Field(None, description="Whether location is in a rural area / Gram Panchayat")
+    is_urban_area: Optional[bool] = Field(None, description="Whether location is in a statutory town or notified urban local body")
+    town_name: Optional[str] = Field(None, description="Name of the statutory town or ULB")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class VendorFacts(BaseModel):
+    """Street vendor livelihood and identification facts."""
+    is_urban_street_vendor: Optional[bool] = Field(None, description="Whether applicant is engaged in street vending in urban area")
+    has_vending_certificate: Optional[bool] = Field(None, description="Whether vendor possesses Certificate of Vending or ID card")
+    identified_in_ulb_survey: Optional[bool] = Field(None, description="Whether vendor was identified in the ULB vendor survey")
+    has_letter_of_recommendation: Optional[bool] = Field(None, description="Whether vendor has a Letter of Recommendation (LoR) from ULB/TVC")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class MaternityFacts(BaseModel):
+    """Maternity parity, order, and child facts."""
+    child_order: Optional[int] = Field(None, ge=1, le=10, description="Birth order of the child (1 for first child, 2 for second)")
+    is_girl_child: Optional[bool] = Field(None, description="Whether the child is female (mandatory true for second child under PMMVY)")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ExclusionFacts(BaseModel):
+    """Statutory exclusion indicators."""
+    owns_motorized_three_four_wheeler: Optional[bool] = Field(None, description="Exclusion: owns motorized 3 or 4-wheeler")
+    owns_mechanized_agri_equipment: Optional[bool] = Field(None, description="Exclusion: owns mechanized 3/4-wheeler agricultural equipment")
+    kcc_limit_above_fifty_thousand: Optional[bool] = Field(None, description="Exclusion: holds KCC with limit >= Rs 50,000")
+    has_member_earning_above_fifteen_thousand: Optional[bool] = Field(None, description="Exclusion: family member earns > Rs 15,000/mo")
 
     model_config = ConfigDict(extra="forbid")
 
@@ -161,6 +261,14 @@ class EvaluationFacts(BaseModel):
     beneficiary: Optional[BeneficiaryFacts] = Field(None, description="Primary beneficiary facts")
     guardian: Optional[GuardianFacts] = Field(None, description="Guardian facts for minor accounts")
     account: Optional[AccountFacts] = Field(None, description="Account-specific facts")
+    applicant: Optional[ApplicantFacts] = Field(None, description="Applicant demographic and individual facts")
+    household: Optional[HouseholdFacts] = Field(None, description="Household status and LPG facts")
+    trade: Optional[TradeFacts] = Field(None, description="Artisan and trade facts")
+    housing: Optional[HousingFacts] = Field(None, description="Housing and shelter condition facts")
+    location: Optional[LocationFacts] = Field(None, description="Geographical and jurisdiction facts")
+    vendor: Optional[VendorFacts] = Field(None, description="Street vendor livelihood facts")
+    maternity: Optional[MaternityFacts] = Field(None, description="Maternity parity and clinical facts")
+    exclusions: Optional[ExclusionFacts] = Field(None, description="Specific statutory exclusion facts")
 
     model_config = ConfigDict(extra="forbid")
 

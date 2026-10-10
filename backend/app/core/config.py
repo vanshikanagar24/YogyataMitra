@@ -1,9 +1,9 @@
 """Application configuration settings."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import computed_field, model_validator
+from pydantic import computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine.url import URL
 
@@ -28,17 +28,37 @@ class Settings(BaseSettings):
     # Flag for demo accounts: strictly forbidden and forced False in production
     ENABLE_DEMO_ACCOUNTS: bool = True
 
+    # Officer Workload & SLA Settings (Phase D)
+    OFFICER_DEFAULT_SLA_HOURS: int = 48
+    OFFICER_SLA_DUE_SOON_HOURS: int = 12
+    OFFICER_MAX_ACTIVE_CASES: int = 15
+
+
     # AI Policy Discovery Settings (Phase 15)
     AI_PROVIDER: str = "mock"  # "mock" or "gemini"
     AI_DISCOVERY_PROVIDER: str = "mock"  # "mock" or "gemini"
     GEMINI_API_KEY: Optional[str] = None
     GEMINI_MODEL: str = "gemini-2.5-flash"
 
-    # Allowed CORS origins for local development frontend
+    # Allowed CORS origins (configurable via environment variable CORS_ORIGINS as comma-separated or JSON list)
     CORS_ORIGINS: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
+
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Any) -> list[str]:
+        if isinstance(v, str):
+            val = v.strip()
+            if val.startswith("[") and val.endswith("]"):
+                import json
+                try:
+                    return json.loads(val)
+                except Exception:
+                    val = val[1:-1]
+            return [origin.strip() for origin in val.split(",") if origin.strip()]
+        return v
 
     # PostgreSQL connection parameters
     POSTGRES_USER: str = "yogyata_admin"
@@ -80,6 +100,10 @@ class Settings(BaseSettings):
             if self.ENABLE_DEMO_ACCOUNTS:
                 raise ValueError(
                     "ENABLE_DEMO_ACCOUNTS cannot be enabled in production environment."
+                )
+            if any(origin.strip() == "*" for origin in self.CORS_ORIGINS):
+                raise ValueError(
+                    "Wildcard '*' CORS origin is strictly forbidden in production. Explicit trusted origins required."
                 )
         else:
             # Non-production (development, demo, test): provide clearly marked insecure fallback

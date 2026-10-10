@@ -19,6 +19,7 @@ import { EvaluationResponse } from "../../types/evaluation";
 import { StatusBadge } from "../common/StatusBadge";
 import { useLanguage } from "../../context/LanguageContext";
 import { NextActionGuidance } from "./NextActionGuidance";
+import { getOfficialSourceUrl, getOfficialSourceTitle } from "../../utils/officialSources";
 
 interface EvaluationResultCardProps {
   evaluation: EvaluationResponse;
@@ -92,13 +93,15 @@ export const EvaluationResultCard: React.FC<EvaluationResultCardProps> = ({
 
   // Resolve official statutory source
   const provenance = (evaluation.trace as any)?.provenance;
-  const officialSourceTitle =
-    provenance?.source_title ||
-    (evaluation.scheme_code === "PM_KISAN"
-      ? "Operational Guidelines for Pradhan Mantri Kisan Samman Nidhi (PM-KISAN) 2023"
-      : evaluation.scheme_code === "SSY"
-      ? "Sukanya Samriddhi Account Scheme, 2019 (Ministry of Finance / Gazette of India)"
-      : "Official Statutory Gazette Guidelines");
+  const officialSourceTitle = getOfficialSourceTitle(
+    evaluation.scheme_code,
+    isHindi,
+    provenance?.source_title
+  );
+  const officialSourceUrl = getOfficialSourceUrl(
+    evaluation.scheme_code,
+    provenance?.source_url
+  );
 
   return (
     <div className={`rounded-xl border-2 ${style.border} ${style.bg} p-6 sm:p-8 shadow-gov-elevated bg-white space-y-6`}>
@@ -197,14 +200,27 @@ export const EvaluationResultCard: React.FC<EvaluationResultCardProps> = ({
           </p>
         </div>
 
-        <div className="pt-2 flex justify-end">
+        <div className="pt-2 flex items-center justify-end space-x-3 flex-wrap gap-2">
           <Link
             href={`/schemes/${evaluation.scheme_code}`}
             className="inline-flex items-center space-x-1.5 text-xs font-bold text-primary hover:text-primary-dark hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded py-1 px-2.5 bg-white border border-primary-100 shadow-xs"
           >
             <span>[ {t("claims.view_policy_details")} ]</span>
-            <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </Link>
+
+          {officialSourceUrl && (
+            <a
+              href={officialSourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${t("claims.view_official_source")} — ${officialSourceTitle} (${t("a11y.external_link")})`}
+              className="inline-flex items-center space-x-1.5 text-xs font-bold text-gov-secondary hover:text-gov-text hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded py-1 px-2.5 bg-white border border-gov-border shadow-xs"
+            >
+              <span>[ {t("claims.view_official_source")} ]</span>
+              <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+            </a>
+          )}
         </div>
       </div>
 

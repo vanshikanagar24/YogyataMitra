@@ -9,12 +9,18 @@ Provides stateful lifecycle management for citizen welfare entitlement journeys:
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from pathlib import Path
+import re
 from typing import List
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import ROOT_DIR
 from app.core.database import get_db
 from app.models.citizen import Claim, Evidence
 from app.models.journey import EvaluationJourney
@@ -354,6 +360,133 @@ async def add_evidence(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(exc),
         ) from exc
+
+
+ALLOWED_UPLOAD_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".docx"}
+MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+@router.post(
+    "/{journey_id}/claims/{claim_id}/evidence/upload",
+    response_model=JourneyEvidenceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload and attach supporting evidence file to a claim",
+    description="Accepts a multipart file upload (.pdf, .jpg, .jpeg, .png, .docx <= 10MB), persists the file, and registers an Evidence record with status PENDING.",
+    responses={
+        201: {"description": "Evidence file uploaded and attached successfully."},
+        400: {"model": ErrorResponse, "description": "Invalid file type, size exceeded, or journey in invalid state."},
+        404: {"model": ErrorResponse, "description": "Journey or claim not found."},
+    },
+)
+async def upload_evidence(
+    journey_id: uuid.UUID,
+    claim_id: uuid.UUID,
+    file: UploadFile = File(...),
+    evidence_type: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+) -> JourneyEvidenceResponse:
+    """Upload and attach a supporting evidence file to a claim with initial PENDING status."""
+    filename = file.filename or "uploaded_document"
+    ext = Path(filename).suffix.lower()
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file type '{ext}'. Allowed types: {', '.join(sorted(ALLOWED_UPLOAD_EXTENSIONS))}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"File size exceeds the 10 MB limit ({len(content)} bytes).",
+        )
+    if len(content) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Uploaded file is empty.",
+        )
+
+    safe_base = re.sub(r"[^a-zA-Z0-9_.-]", "_", Path(filename).name)
+    unique_filename = f"{uuid.uuid4().hex[:8]}_{safe_base}"
+    journey_upload_dir = ROOT_DIR / "uploads" / str(journey_id)
+    journey_upload_dir.mkdir(parents=True, exist_ok=True)
+    destination = journey_upload_dir / unique_filename
+
+    destination.write_bytes(content)
+    storage_ref = f"uploads/{journey_id}/{unique_filename}"
+
+    metadata_json = {
+        "original_filename": filename,
+        "content_type": file.content_type or "application/octet-stream",
+        "size_bytes": len(content),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    service = JourneyService(db)
+    try:
+        req = JourneyEvidenceCreateRequest(
+            evidence_type=evidence_type,
+            storage_reference=storage_ref,
+            metadata_json=metadata_json,
+        )
+        evidence = await service.add_evidence(journey_id, claim_id, req)
+        return to_journey_evidence_response(evidence)
+    except JourneyNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except ClaimNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except InvalidJourneyTransitionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/{journey_id}/evidence/{evidence_id}/file",
+    summary="Download or view evidence file artifact",
+    description="Returns the physical file artifact for a given evidence record.",
+)
+async def get_evidence_file(
+    journey_id: uuid.UUID,
+    evidence_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve and stream the physical file artifact of an evidence record."""
+    stmt = (
+        select(Evidence)
+        .join(Claim)
+        .where(
+            Evidence.id == evidence_id,
+            Claim.journey_id == journey_id,
+        )
+    )
+    res = await db.execute(stmt)
+    evidence = res.scalar_one_or_none()
+    if not evidence or not evidence.storage_reference:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidence file not found.",
+        )
+    file_path = ROOT_DIR / evidence.storage_reference
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Evidence file artifact does not exist on disk.",
+        )
+    original_filename = (evidence.metadata_json or {}).get("original_filename", file_path.name)
+    content_type = (evidence.metadata_json or {}).get("content_type", "application/octet-stream")
+    return FileResponse(
+        path=file_path,
+        media_type=content_type,
+        filename=original_filename,
+    )
 
 
 @router.post(

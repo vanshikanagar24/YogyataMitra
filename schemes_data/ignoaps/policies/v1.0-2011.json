@@ -1,0 +1,53 @@
+{
+  "scheme_code": "IGNOAPS",
+  "policy_version_code": "v1.0-2011",
+  "effective_from": "2011-06-09",
+  "effective_to": null,
+  "source": {
+    "title": "National Social Assistance Programme (NSAP) Guidelines — IGNOAPS",
+    "url": "https://nsap.nic.in/guidelines.html",
+    "reference": "Department of Rural Development, Ministry of Rural Development, GoI",
+    "document_identifier": "MORD-NSAP-IGNOAPS-GUIDELINES-2011"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "IGNOAPS-V1-ROOT",
+    "operator": "AND",
+    "description_en": "IGNOAPS Statutory Old Age Pension Eligibility for BPL Senior Citizens",
+    "description_hi": "बीपीएल वरिष्ठ नागरिकों के लिए इग्नुआप्स वैधानिक वृद्धावस्था पेंशन पात्रता",
+    "source_clause": "NSAP Guidelines Paragraph 2.1",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "IGNOAPS-MIN-AGE-60",
+        "operator": "GTE",
+        "field_path": "applicant.age",
+        "expected_value": 60,
+        "description_en": "Senior citizen applicant must have attained at least 60 years of age",
+        "description_hi": "वरिष्ठ नागरिक आवेदक की आयु कम से कम 60 वर्ष पूर्ण होनी चाहिए",
+        "source_clause": "Paragraph 2.1(a)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "IGNOAPS-BPL-HOUSEHOLD",
+        "operator": "EQ",
+        "field_path": "family.is_bpl",
+        "expected_value": true,
+        "description_en": "Applicant must belong to a household living Below the Poverty Line according to GoI criteria",
+        "description_hi": "आवेदक को भारत सरकार के मानदंडों के अनुसार गरीबी रेखा से नीचे (बीपीएल) रहने वाले परिवार से संबंधित होना चाहिए",
+        "source_clause": "Paragraph 2.1(b)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "IGNOAPS-NO-OTHER-PENSION",
+        "operator": "EQ",
+        "field_path": "applicant.has_other_social_security_pension",
+        "expected_value": false,
+        "description_en": "Applicant must not be in receipt of another regular statutory social security pension",
+        "description_hi": "आवेदक को अन्य किसी नियमित वैधानिक सामाजिक सुरक्षा पेंशन का लाभ प्राप्त नहीं होना चाहिए",
+        "source_clause": "Paragraph 2.1(c)"
+      }
+    ]
+  }
+}

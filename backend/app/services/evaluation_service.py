@@ -17,10 +17,11 @@ Zero scheme-specific policy branching in this service.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from datetime import date, datetime, timezone
+from typing import Any, Dict, List, Optional, Set
 import uuid
 
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -31,21 +32,53 @@ from app.engine.explainability.audit import create_audit_evaluation_record
 from app.engine.explainability.provenance import PolicyProvenance
 from app.engine.explainability.trace_builder import build_explainability_trace
 from app.engine.types import RuleTruthValue
-from app.models.citizen import Citizen
-from app.models.enums import EligibilityResult
+from app.models.citizen import Citizen, Claim, Evidence, VerificationRecord
+from app.models.enums import (
+    ClaimStatus,
+    EligibilityResult,
+    EvidenceStatus,
+    HumanReviewStatus,
+    JourneyState,
+    VerificationStatus,
+)
 from app.models.evaluation import EvaluationTrace
-from app.models.scheme import PolicyVersion, Scheme
+from app.models.human_review import HumanReview, HumanReviewAuditEvent
+from app.models.journey import EvaluationJourney, JourneyTransitionRecord
+from app.models.scheme import PolicyVersion, RuleSet, Scheme
 from app.schemas.api import (
+    AccountFacts,
+    ApplicantFacts,
+    BeneficiaryFacts,
     BlockerResponse,
+    EvaluationFacts,
     EvaluationRequest,
     EvaluationResponse,
+    ExclusionFacts,
+    FamilyFacts,
+    GuardianFacts,
+    HouseholdFacts,
+    HousingFacts,
+    LandFacts,
+    LocationFacts,
+    MaternityFacts,
     PersistedEvaluationResponse,
+    TradeFacts,
+    VendorFacts,
+)
+from app.schemas.citizen_application import CitizenDecisionResponse
+from app.schemas.officer import (
+    OfficerAssessmentResponse,
+    OfficerAssessmentRuleResponse,
 )
 from app.services.policy_loader import SchemeNotFoundError
 from app.services.policy_selector import (
     PolicyVersionNotFoundError,
     get_policy_rule_ast,
     select_policy_version,
+)
+from app.services.verification_service import (
+    compute_verification_status,
+    get_or_create_human_review,
 )
 
 
@@ -347,3 +380,636 @@ class EvaluationService:
                     reasons_hi.append(blocker.message_hi)
 
         return reasons_en, reasons_hi
+
+    def _extract_facts_from_claims(self, claims: List[Claim]) -> Dict[str, Any]:
+        """Extract and categorize verified facts from journey claims into hierarchical sections.
+
+        Strict Verified Fact Provenance Invariant (Phase F):
+        Only claims with status == ClaimStatus.VERIFIED may enter the evaluation fact snapshot.
+        Unverified declarations (CLAIMED, PENDING, REJECTED, UNKNOWN) MUST NOT become evaluation facts.
+        """
+        field_to_section: Dict[str, str] = {}
+        for sec, flds in VALID_FACT_FIELDS.items():
+            for f in flds:
+                field_to_section[f] = sec
+
+        facts: Dict[str, Any] = {}
+
+        for claim in claims:
+            # Enforce strict verified fact provenance: unverified claims are never evaluation facts
+            if claim.status != ClaimStatus.VERIFIED:
+                continue
+
+            # 1. Dot notation e.g. "family.owns_cultivable_land"
+            if "." in claim.claim_type:
+                parts = claim.claim_type.split(".", 1)
+                section, field = parts[0], parts[1]
+                if section in VALID_FACT_FIELDS and field in VALID_FACT_FIELDS[section]:
+                    facts.setdefault(section, {})
+                    val = claim.value_json
+                    if isinstance(val, dict) and "value" in val and len(val) == 1:
+                        val = val["value"]
+                    facts[section][field] = val
+
+            # 2. Section name directly e.g. "family"
+            elif claim.claim_type in VALID_FACT_FIELDS:
+                section = claim.claim_type
+                if isinstance(claim.value_json, dict):
+                    facts.setdefault(section, {})
+                    for k, v in claim.value_json.items():
+                        if k in VALID_FACT_FIELDS[section]:
+                            facts[section][k] = v
+
+            # 3. Flat field directly e.g. "owns_cultivable_land"
+            elif claim.claim_type in field_to_section:
+                section = field_to_section[claim.claim_type]
+                facts.setdefault(section, {})
+                val = claim.value_json
+                if isinstance(val, dict) and "value" in val and len(val) == 1:
+                    val = val["value"]
+                facts[section][claim.claim_type] = val
+
+        return facts
+
+
+    def _build_trace_json(
+        self,
+        eval_result,
+        explainability_trace,
+        pv: PolicyVersion,
+    ) -> Dict[str, Any]:
+        rules_evaluated: List[Dict[str, Any]] = []
+        passed_conditions: List[str] = []
+        failed_conditions: List[str] = []
+
+        for node in explainability_trace.ordered_nodes:
+            if node.truth_value == RuleTruthValue.TRUE:
+                res_str = "PASS"
+                if node.explanation_en:
+                    passed_conditions.append(f"{node.rule_id or 'Criterion'}: {node.explanation_en}")
+            elif node.truth_value == RuleTruthValue.FALSE:
+                res_str = "FAIL"
+                if node.explanation_en:
+                    failed_conditions.append(f"{node.rule_id or 'Criterion'}: {node.explanation_en}")
+            else:
+                res_str = "UNKNOWN"
+
+            op_str = (
+                node.operator.value
+                if hasattr(node.operator, "value")
+                else (str(node.operator) if node.operator else None)
+            )
+            rules_evaluated.append({
+                "rule_id": node.rule_id or node.node_id,
+                "rule_name": node.rule_id or "Statutory Criterion",
+                "description": node.explanation_en or "",
+                "result": res_str,
+                "details": node.explanation_en,
+                "operator": op_str,
+                "expected_value": str(node.expected_value) if node.expected_value is not None else None,
+                "actual_value": str(node.actual_value) if node.actual_value is not None else None,
+            })
+
+        reasons_en, reasons_hi = self._extract_reasons(explainability_trace)
+
+        missing_facts = list(eval_result.all_missing_fields)
+        disqualifiers = [
+            node.explanation_en
+            for node in explainability_trace.ordered_nodes
+            if node.truth_value == RuleTruthValue.FALSE and node.explanation_en
+        ]
+        blockers = [
+            {
+                "code": b.code,
+                "category": b.category.value if hasattr(b.category, "value") else str(b.category),
+                "field_path": b.field_path,
+                "rule_id": b.rule_id,
+                "message_en": b.message_en,
+                "message_hi": b.message_hi,
+            }
+            for b in explainability_trace.blockers
+        ]
+
+        return {
+            "outcome": eval_result.overall_result.value,
+            "policy_version_code": pv.version_code,
+            "rule_definition_hash": pv.rule_definition_hash,
+            "rules_evaluated": rules_evaluated,
+            "missing_facts": missing_facts,
+            "disqualifiers": disqualifiers,
+            "reasons_en": list(dict.fromkeys(reasons_en)),
+            "reasons_hi": list(dict.fromkeys(reasons_hi)),
+            "passed_conditions": list(dict.fromkeys(passed_conditions)),
+            "failed_conditions": list(dict.fromkeys(failed_conditions)),
+            "unverified_requirements": [],
+            "blockers": blockers,
+        }
+
+    def _trace_to_assessment_response(self, trace: EvaluationTrace) -> OfficerAssessmentResponse:
+        trace_json = trace.trace_json or {}
+        rules_evaluated: List[OfficerAssessmentRuleResponse] = []
+        for r in trace_json.get("rules_evaluated", []):
+            rules_evaluated.append(
+                OfficerAssessmentRuleResponse(
+                    rule_id=r.get("rule_id", "UNKNOWN"),
+                    rule_name=r.get("rule_name", r.get("rule_id", "Statutory Rule")),
+                    description=r.get("description", ""),
+                    result=r.get("result", "UNKNOWN"),
+                    details=r.get("details") or r.get("reason"),
+                    operator=r.get("operator"),
+                    expected_value=str(r.get("expected_value")) if r.get("expected_value") is not None else None,
+                    actual_value=str(r.get("actual_value")) if r.get("actual_value") is not None else None,
+                )
+            )
+
+        raw_missing = trace_json.get("missing_facts", [])
+        missing_facts = [
+            item.get("fact_key", item.get("name", str(item))) if isinstance(item, dict) else str(item)
+            for item in raw_missing
+        ]
+
+        raw_disqualifiers = trace_json.get("disqualifiers", trace_json.get("blockers", []))
+        disqualifiers = [
+            item.get("message", item.get("description", item.get("code", str(item))))
+            if isinstance(item, dict) else str(item)
+            for item in raw_disqualifiers
+        ]
+
+        pv_code = "1.0"
+        if trace.policy_version:
+            pv_code = trace.policy_version.version_code
+        elif "policy_version_code" in trace_json:
+            pv_code = trace_json["policy_version_code"]
+
+        return OfficerAssessmentResponse(
+            evaluation_id=trace.id,
+            determination=trace.result_state.value,
+            evaluated_at=trace.created_at,
+            ruleset_version=pv_code,
+            ruleset_hash=trace.rule_definition_hash,
+            rules_evaluated=rules_evaluated,
+            missing_facts=missing_facts,
+            disqualifiers=disqualifiers,
+            reasons_en=trace_json.get("reasons_en", []),
+            reasons_hi=trace_json.get("reasons_hi", []),
+        )
+
+    async def evaluate_case(
+        self,
+        journey_id: uuid.UUID,
+        actor_identity: str,
+        actor_role: str,
+        notes: Optional[str] = None,
+    ) -> OfficerAssessmentResponse:
+        """Execute deterministic eligibility evaluation for a case.
+
+        Server-side gate enforcement:
+        - If mandatory requirements are missing: returns INSUFFICIENT_INFORMATION.
+        - If verification is pending/unverified/rejected: returns VERIFICATION_REQUIRED.
+        - When all mandatory requirements and evidence are verified: runs DeterministicEvaluator
+          against the application's bound policy_version_id and returns ELIGIBLE / INELIGIBLE.
+        """
+        # 0. Serialize concurrent evaluation attempts with exclusive row lock
+        await self.session.execute(
+            select(EvaluationJourney.id).where(EvaluationJourney.id == journey_id).with_for_update()
+        )
+
+        # 1. Fetch journey with bound policy version and relations
+        stmt = (
+            select(EvaluationJourney)
+            .options(
+                selectinload(EvaluationJourney.scheme),
+                selectinload(EvaluationJourney.citizen),
+                selectinload(EvaluationJourney.policy_version).selectinload(PolicyVersion.rule_set),
+                selectinload(EvaluationJourney.claims).selectinload(Claim.evidence_items).selectinload(Evidence.verification_records),
+                selectinload(EvaluationJourney.clarification_requests),
+                selectinload(EvaluationJourney.evaluation_traces),
+                selectinload(EvaluationJourney.latest_evaluation),
+            )
+            .where(EvaluationJourney.id == journey_id)
+        )
+        res = await self.session.execute(stmt)
+        journey = res.scalars().first()
+        if not journey:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Verification case with ID '{journey_id}' was not found",
+            )
+
+        # Statutory Immutability: Verify case has bound statutory policy version and structured ruleset
+        if not journey.policy_version_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Case has no bound statutory policy version.",
+            )
+        if not journey.policy_version or not journey.policy_version.rule_set:
+            pv_stmt = (
+                select(PolicyVersion)
+                .options(selectinload(PolicyVersion.rule_set))
+                .where(PolicyVersion.id == journey.policy_version_id)
+            )
+            journey.policy_version = (await self.session.execute(pv_stmt)).scalar_one_or_none()
+
+        pv = journey.policy_version
+        if not pv or not pv.rule_set or not pv.rule_set.definition_json:
+            scheme_code = journey.scheme.scheme_code if journey.scheme else "UNKNOWN"
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Scheme '{scheme_code}' does not have a structured deterministic ruleset.",
+            )
+
+        review = await get_or_create_human_review(self.session, journey.id, actor_identity)
+        now = datetime.now(timezone.utc)
+        eval_date = journey.submitted_at.date() if journey.submitted_at else date.today()
+
+        # 2. Check Idempotency / Double-click protection (Section 27)
+        if journey.latest_evaluation and journey.latest_evaluation.evaluated_by == actor_identity:
+            age_seconds = (now - journey.latest_evaluation.created_at).total_seconds()
+            if age_seconds < 2.0:
+                return self._trace_to_assessment_response(journey.latest_evaluation)
+
+        # 3. Server-side verification gate (Section 8)
+        v_status = await compute_verification_status(self.session, journey_id)
+        missing_mandatory = v_status.get("missing_mandatory_requirements", [])
+
+        # GATE CASE 1: Missing mandatory evidence / information -> INSUFFICIENT_INFORMATION
+        if len(missing_mandatory) > 0:
+            outcome = EligibilityResult.INSUFFICIENT_INFORMATION
+            reasons_en = [f"Missing mandatory statutory requirement: {req}" for req in missing_mandatory]
+            reasons_hi = [f"अनिवार्य वैधानिक आवश्यकता अनुपलब्ध है: {req}" for req in missing_mandatory]
+            blockers = [{"code": req, "message": f"Missing mandatory document: {req}"} for req in missing_mandatory]
+
+            trace_json = {
+                "outcome": outcome.value,
+                "policy_version_code": journey.policy_version.version_code if journey.policy_version else None,
+                "rules_evaluated": [],
+                "missing_facts": missing_mandatory,
+                "disqualifiers": [],
+                "reasons_en": reasons_en,
+                "reasons_hi": reasons_hi,
+                "passed_conditions": [],
+                "failed_conditions": [],
+                "unverified_requirements": [],
+                "blockers": blockers,
+            }
+
+            trace = EvaluationTrace(
+                id=uuid.uuid4(),
+                citizen_id=journey.citizen_id,
+                scheme_id=journey.scheme_id,
+                policy_version_id=journey.policy_version_id,
+                journey_id=journey.id,
+                evaluated_by=actor_identity,
+                evaluation_date=eval_date,
+                input_snapshot_json={"missing_mandatory_requirements": missing_mandatory},
+                result_state=outcome,
+                trace_json=trace_json,
+                rule_definition_hash=journey.policy_version.rule_definition_hash if journey.policy_version else None,
+                created_at=now,
+            )
+            self.session.add(trace)
+            journey.latest_evaluation_id = trace.id
+            journey.updated_at = now
+
+            prev_state = journey.state
+            journey.state = JourneyState.ACTION_REQUIRED
+            t_record = JourneyTransitionRecord(
+                journey_id=journey.id,
+                from_state=prev_state,
+                to_state=JourneyState.ACTION_REQUIRED,
+                actor=actor_identity,
+                reason=f"Evaluation halted: mandatory evidence missing ({', '.join(missing_mandatory)})",
+            )
+            self.session.add(t_record)
+
+            review.evaluation_id = trace.id
+            audit_event = HumanReviewAuditEvent(
+                review_id=review.id,
+                journey_id=journey.id,
+                actor_identity=actor_identity,
+                actor_role=actor_role,
+                action="EVALUATION_COMPLETED",
+                previous_status=review.status.value,
+                new_status=review.status.value,
+                reason="Evaluation executed: INSUFFICIENT_INFORMATION",
+                details_json={
+                    "evaluation_id": str(trace.id),
+                    "outcome": outcome.value,
+                    "missing_mandatory": missing_mandatory,
+                    "notes": notes,
+                },
+            )
+            self.session.add(audit_event)
+            await self.session.commit()
+            return self._trace_to_assessment_response(trace)
+
+        # GATE CASE 2: Verification Incomplete / Blocked -> VERIFICATION_REQUIRED
+        if not v_status.get("is_ready_for_evaluation"):
+            outcome = EligibilityResult.VERIFICATION_REQUIRED
+            unverified: List[str] = []
+            if v_status.get("pending_mandatory_requirements"):
+                unverified.extend([f"{r} (PENDING)" for r in v_status["pending_mandatory_requirements"]])
+            if v_status.get("rejected_mandatory_requirements"):
+                unverified.extend([f"{r} (REJECTED)" for r in v_status["rejected_mandatory_requirements"]])
+            if v_status.get("clarification_mandatory_requirements"):
+                unverified.extend([f"{r} (CLARIFICATION_REQUIRED)" for r in v_status["clarification_mandatory_requirements"]])
+
+            if not unverified:
+                if v_status.get("open_clarification_count", 0) > 0:
+                    unverified.append("Open clarification request awaiting response/resolution")
+                if v_status.get("pending_evidence_count", 0) > 0:
+                    unverified.append(f"{v_status['pending_evidence_count']} evidence item(s) pending officer verification")
+                if v_status.get("rejected_evidence_count", 0) > 0:
+                    unverified.append(f"{v_status['rejected_evidence_count']} evidence item(s) rejected")
+                if v_status.get("clarification_required_count", 0) > 0:
+                    unverified.append(f"{v_status['clarification_required_count']} evidence item(s) requiring clarification")
+
+            reasons_en = [f"Statutory evidence verification incomplete: {item}" for item in unverified]
+            reasons_hi = [f"वैधानिक साक्ष्य सत्यापन अपूर्ण है: {item}" for item in unverified]
+            blockers = [{"code": "VERIFICATION_PENDING", "message": f"Verification incomplete: {item}"} for item in unverified]
+
+            trace_json = {
+                "outcome": outcome.value,
+                "policy_version_code": journey.policy_version.version_code if journey.policy_version else None,
+                "rules_evaluated": [],
+                "missing_facts": [],
+                "disqualifiers": [],
+                "reasons_en": reasons_en,
+                "reasons_hi": reasons_hi,
+                "passed_conditions": [],
+                "failed_conditions": [],
+                "unverified_requirements": unverified,
+                "blockers": blockers,
+            }
+
+            trace = EvaluationTrace(
+                id=uuid.uuid4(),
+                citizen_id=journey.citizen_id,
+                scheme_id=journey.scheme_id,
+                policy_version_id=journey.policy_version_id,
+                journey_id=journey.id,
+                evaluated_by=actor_identity,
+                evaluation_date=eval_date,
+                input_snapshot_json={"unverified_requirements": unverified},
+                result_state=outcome,
+                trace_json=trace_json,
+                rule_definition_hash=journey.policy_version.rule_definition_hash if journey.policy_version else None,
+                created_at=now,
+            )
+            self.session.add(trace)
+            journey.latest_evaluation_id = trace.id
+            journey.updated_at = now
+
+            prev_state = journey.state
+            journey.state = JourneyState.ACTION_REQUIRED
+            t_record = JourneyTransitionRecord(
+                journey_id=journey.id,
+                from_state=prev_state,
+                to_state=JourneyState.ACTION_REQUIRED,
+                actor=actor_identity,
+                reason="Evaluation halted: verification required",
+            )
+            self.session.add(t_record)
+
+            review.evaluation_id = trace.id
+            audit_event = HumanReviewAuditEvent(
+                review_id=review.id,
+                journey_id=journey.id,
+                actor_identity=actor_identity,
+                actor_role=actor_role,
+                action="EVALUATION_COMPLETED",
+                previous_status=review.status.value,
+                new_status=review.status.value,
+                reason="Evaluation executed: VERIFICATION_REQUIRED",
+                details_json={
+                    "evaluation_id": str(trace.id),
+                    "outcome": outcome.value,
+                    "unverified_requirements": unverified,
+                    "notes": notes,
+                },
+            )
+            self.session.add(audit_event)
+            await self.session.commit()
+            return self._trace_to_assessment_response(trace)
+
+        # GATE CASE 3: Verification Complete -> Execute Deterministic Rule Engine
+        # 1. Extract AST Node
+        ast_node = get_policy_rule_ast(pv)
+
+        # 2. Extract Verified Facts from Claims
+        facts_raw = self._extract_facts_from_claims(journey.claims)
+        evaluation_facts = EvaluationFacts(**facts_raw)
+        facts_dict = evaluation_facts.to_engine_dict()
+
+        # 3. Context & Stateless Evaluation
+        ctx = EvaluationContext(
+            data=facts_dict,
+            evaluation_date=eval_date,
+            policy_metadata=dict(pv.rule_set.definition_json.get("metadata", {}))
+            if pv.rule_set and isinstance(pv.rule_set.definition_json, dict)
+            else {},
+        )
+        eval_result = self.evaluator.evaluate(ast_node, ctx)
+
+        # 4. Build Provenance & Explainability Trace
+        eval_id = uuid.uuid4()
+        provenance = PolicyProvenance(
+            scheme_id=journey.scheme.id,
+            scheme_code=journey.scheme.scheme_code,
+            policy_version_id=pv.id,
+            policy_version_code=pv.version_code,
+            rule_set_id=pv.rule_set.id if pv.rule_set else None,
+            rule_set_version=pv.rule_set.rule_set_version if pv.rule_set else "1.0",
+            canonical_rule_hash=pv.rule_definition_hash or "",
+            evaluation_date=eval_date,
+            effective_from=pv.effective_from,
+            effective_to=pv.effective_to,
+            source_url=pv.source_url,
+            source_title=pv.source_title,
+            source_clause=None,
+        )
+        explainability_trace = build_explainability_trace(
+            eval_result=eval_result,
+            provenance=provenance,
+            evaluation_id=eval_id,
+        )
+
+        # 5. Build Trace JSON
+        trace_json = self._build_trace_json(eval_result, explainability_trace, pv)
+
+        # 6. Persist EvaluationTrace
+        trace = EvaluationTrace(
+            id=eval_id,
+            citizen_id=journey.citizen_id,
+            scheme_id=journey.scheme_id,
+            policy_version_id=pv.id,
+            journey_id=journey.id,
+            evaluated_by=actor_identity,
+            evaluation_date=eval_date,
+            input_snapshot_json=evaluation_facts.model_dump(mode="json", exclude_unset=True),
+            result_state=eval_result.overall_result,
+            trace_json=trace_json,
+            rule_definition_hash=pv.rule_definition_hash,
+            created_at=now,
+        )
+        self.session.add(trace)
+        journey.latest_evaluation_id = trace.id
+        journey.updated_at = now
+
+        # 8. Journey Transition
+        prev_state = journey.state
+        new_journey_state = (
+            JourneyState.EVALUATED
+            if eval_result.overall_result == EligibilityResult.ELIGIBLE
+            else JourneyState.ACTION_REQUIRED
+        )
+        journey.state = new_journey_state
+        t_record = JourneyTransitionRecord(
+            journey_id=journey.id,
+            from_state=prev_state,
+            to_state=new_journey_state,
+            actor=actor_identity,
+            reason=f"Deterministic statutory evaluation executed: outcome={eval_result.overall_result.value}",
+        )
+        self.session.add(t_record)
+
+        # 9. Audit Event
+        review.evaluation_id = trace.id
+        audit_event = HumanReviewAuditEvent(
+            review_id=review.id,
+            journey_id=journey.id,
+            actor_identity=actor_identity,
+            actor_role=actor_role,
+            action="EVALUATION_COMPLETED",
+            previous_status=review.status.value,
+            new_status=review.status.value,
+            reason=f"Evaluation executed: {eval_result.overall_result.value}",
+            details_json={
+                "evaluation_id": str(trace.id),
+                "outcome": eval_result.overall_result.value,
+                "policy_version": pv.version_code,
+                "notes": notes,
+            },
+        )
+        self.session.add(audit_event)
+        await self.session.commit()
+        return self._trace_to_assessment_response(trace)
+
+    async def get_case_evaluation(self, journey_id: uuid.UUID) -> OfficerAssessmentResponse:
+        """Retrieve the latest statutory evaluation for a case."""
+        stmt = (
+            select(EvaluationTrace)
+            .options(selectinload(EvaluationTrace.policy_version))
+            .where(EvaluationTrace.journey_id == journey_id)
+            .order_by(EvaluationTrace.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        trace = res.scalars().first()
+        if not trace:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No statutory evaluation has been executed for case '{journey_id}'.",
+            )
+        return self._trace_to_assessment_response(trace)
+
+    async def get_case_evaluation_history(self, journey_id: uuid.UUID) -> List[OfficerAssessmentResponse]:
+        """Retrieve complete historical audit log of statutory evaluations for a case."""
+        stmt = (
+            select(EvaluationTrace)
+            .options(selectinload(EvaluationTrace.policy_version))
+            .where(EvaluationTrace.journey_id == journey_id)
+            .order_by(EvaluationTrace.created_at.desc())
+        )
+        res = await self.session.execute(stmt)
+        traces = res.scalars().all()
+        return [self._trace_to_assessment_response(t) for t in traces]
+
+    async def get_citizen_decision(
+        self,
+        journey_id: uuid.UUID,
+        citizen_id: uuid.UUID,
+    ) -> CitizenDecisionResponse:
+        """Retrieve the citizen-facing statutory eligibility decision and plain-language explanation."""
+        stmt = (
+            select(EvaluationJourney)
+            .options(
+                selectinload(EvaluationJourney.scheme),
+                selectinload(EvaluationJourney.policy_version),
+                selectinload(EvaluationJourney.latest_evaluation).selectinload(EvaluationTrace.policy_version),
+            )
+            .where(EvaluationJourney.id == journey_id, EvaluationJourney.citizen_id == citizen_id)
+        )
+        res = await self.session.execute(stmt)
+        journey = res.scalars().first()
+        if not journey:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Application not found or does not belong to your account",
+            )
+
+        year = journey.created_at.year if journey.created_at else 2026
+        hex_id = str(journey.id).replace("-", "")[:8].upper()
+        app_ref = f"APP-{year}-{hex_id}"
+
+        if not journey.latest_evaluation:
+            return CitizenDecisionResponse(
+                application_id=journey.id,
+                application_ref=app_ref,
+                scheme_code=journey.scheme.scheme_code if journey.scheme else "UNKNOWN",
+                scheme_name_en=journey.scheme.name_en if journey.scheme else "Welfare Scheme",
+                scheme_name_hi=journey.scheme.name_hi if journey.scheme else "कल्याणकारी योजना",
+                is_evaluated=False,
+                outcome="PENDING_EVALUATION",
+                policy_version_code=journey.policy_version.version_code if journey.policy_version else None,
+                evaluated_at=None,
+                reasons_en=["Application is awaiting statutory eligibility evaluation."],
+                reasons_hi=["आवेदन वैधानिक पात्रता मूल्यांकन की प्रतीक्षा में है।"],
+                passed_conditions=[],
+                failed_conditions=[],
+                missing_information=[],
+                unverified_requirements=[],
+            )
+
+        trace = journey.latest_evaluation
+        trace_json = trace.trace_json or {}
+
+        pv_code = None
+        if trace.policy_version:
+            pv_code = trace.policy_version.version_code
+        elif journey.policy_version:
+            pv_code = journey.policy_version.version_code
+
+        return CitizenDecisionResponse(
+            application_id=journey.id,
+            application_ref=app_ref,
+            scheme_code=journey.scheme.scheme_code if journey.scheme else "UNKNOWN",
+            scheme_name_en=journey.scheme.name_en if journey.scheme else "Welfare Scheme",
+            scheme_name_hi=journey.scheme.name_hi if journey.scheme else "कल्याणकारी योजना",
+            is_evaluated=True,
+            outcome=trace.result_state.value,
+            policy_version_code=pv_code,
+            evaluated_at=trace.created_at,
+            reasons_en=trace_json.get("reasons_en", []),
+            reasons_hi=trace_json.get("reasons_hi", []),
+            passed_conditions=trace_json.get("passed_conditions", []),
+            failed_conditions=trace_json.get("failed_conditions", []),
+            missing_information=trace_json.get("missing_facts", []),
+            unverified_requirements=trace_json.get("unverified_requirements", []),
+        )
+
+
+VALID_FACT_FIELDS: Dict[str, Set[str]] = {
+    "family": set(FamilyFacts.model_fields.keys()),
+    "land": set(LandFacts.model_fields.keys()),
+    "beneficiary": set(BeneficiaryFacts.model_fields.keys()),
+    "guardian": set(GuardianFacts.model_fields.keys()),
+    "account": set(AccountFacts.model_fields.keys()),
+    "applicant": set(ApplicantFacts.model_fields.keys()),
+    "household": set(HouseholdFacts.model_fields.keys()),
+    "trade": set(TradeFacts.model_fields.keys()),
+    "housing": set(HousingFacts.model_fields.keys()),
+    "location": set(LocationFacts.model_fields.keys()),
+    "vendor": set(VendorFacts.model_fields.keys()),
+    "maternity": set(MaternityFacts.model_fields.keys()),
+    "exclusions": set(ExclusionFacts.model_fields.keys()),
+}

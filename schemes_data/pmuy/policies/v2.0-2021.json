@@ -1,0 +1,83 @@
+{
+  "scheme_code": "PMUY",
+  "policy_version_code": "v2.0-2021",
+  "effective_from": "2021-08-10",
+  "effective_to": null,
+  "source": {
+    "title": "Pradhan Mantri Ujjwala Yojana (PMUY) 2.0 Operational Guidelines",
+    "url": "https://www.pmuy.gov.in/ujjwala2.html",
+    "reference": "Ministry of Petroleum and Natural Gas, Government of India",
+    "document_identifier": "MOPNG-PMUY-2.0-GUIDELINES-2021"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMUY-V2-ROOT",
+    "operator": "AND",
+    "description_en": "PMUY Ujjwala 2.0 Statutory LPG Connection Eligibility for Poor Households",
+    "description_hi": "निर्धन परिवारों के लिए पीएमयूवाई उज्ज्वला 2.0 वैधानिक एलपीजी कनेक्शन पात्रता",
+    "source_clause": "Clause 2.0 & 3.0",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMUY-APPLICANT-GENDER",
+        "operator": "EQ",
+        "field_path": "applicant.gender",
+        "expected_value": "FEMALE",
+        "description_en": "The applicant for the LPG connection must be a woman",
+        "description_hi": "एलपीजी कनेक्शन के लिए आवेदक एक महिला होनी चाहिए",
+        "source_clause": "Clause 2.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMUY-APPLICANT-AGE",
+        "operator": "GTE",
+        "field_path": "applicant.age",
+        "expected_value": 18,
+        "description_en": "Woman applicant must have attained at least 18 years of age",
+        "description_hi": "महिला आवेदक की आयु कम से कम 18 वर्ष पूर्ण होनी चाहिए",
+        "source_clause": "Clause 2.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMUY-NO-EXISTING-LPG",
+        "operator": "EQ",
+        "field_path": "household.has_existing_lpg",
+        "expected_value": false,
+        "description_en": "There must be no other LPG connection from any OMC within the applicant household",
+        "description_hi": "आवेदक के परिवार में किसी भी तेल विपणन कंपनी (OMC) से अन्य कोई एलपीजी कनेक्शन नहीं होना चाहिए",
+        "source_clause": "Clause 2.2"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMUY-QUALIFYING-DEPRIVATION",
+        "operator": "EQ",
+        "field_path": "household.is_deprived_or_qualifying_category",
+        "expected_value": true,
+        "description_en": "Household must belong to a recognized poor/deprivation category (SC/ST, PMAY-G, AAY, MBC, Forest Dweller, Tea Tribe, Island, or SECC Poor)",
+        "description_hi": "परिवार एक मान्यता प्राप्त निर्धन/वंचित श्रेणी (एससी/एसटी, पीएमएवाई-जी, एएवाई, एमबीसी, वनवासी, चाय जनजाति, द्वीप, या एसईसीसी निर्धन) से संबंधित होना चाहिए",
+        "source_clause": "Clause 2.3"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMUY-EXCL-GOVT-EMPLOYEE",
+        "operator": "EQ",
+        "field_path": "household.has_government_employee",
+        "expected_value": false,
+        "description_en": "Household must not have any regular government employee",
+        "description_hi": "परिवार में कोई नियमित सरकारी कर्मचारी नहीं होना चाहिए",
+        "source_clause": "Clause 3.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMUY-EXCL-FOUR-WHEELER",
+        "operator": "EQ",
+        "field_path": "household.owns_motorized_four_wheeler",
+        "expected_value": false,
+        "description_en": "Household must not own a motorized four-wheeler",
+        "description_hi": "परिवार के पास चार पहिया मोटर वाहन नहीं होना चाहिए",
+        "source_clause": "Clause 3.2"
+      }
+    ]
+  }
+}

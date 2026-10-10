@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { BookOpen, ShieldCheck, Hash, FileText, Calendar, Building } from "lucide-react";
+import { BookOpen, ShieldCheck, Hash, FileText, Calendar, Building, ExternalLink } from "lucide-react";
 import { useCase } from "../CaseContext";
 
 export default function CasePolicyPage() {
@@ -116,6 +116,69 @@ export default function CasePolicyPage() {
             <span className="font-bold text-slate-900 text-sm">
               {prov.rule_definitions_count} statutory rules
             </span>
+          </div>
+        </div>
+
+        {/* Phase I: Official Document & Source Binding Chain */}
+        <div className="mt-4 pt-4 border-t border-slate-200 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center space-x-1.5">
+              <FileText className="w-4 h-4 text-primary" />
+              <span>Official Source Document Binding</span>
+            </h3>
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200">
+              Provenance: {prov.provenance_completeness || "COMPLETE"}
+            </span>
+          </div>
+
+          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="font-semibold text-slate-900">
+                Document: {prov.document_title || prov.official_citation}
+              </span>
+              {prov.document_version && (
+                <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-200 text-slate-800 self-start sm:self-auto">
+                  Edition: {prov.document_version}
+                </span>
+              )}
+            </div>
+
+            <div className="text-slate-600 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+              <span><strong>Issuing Authority:</strong> {prov.issuing_authority}</span>
+              {prov.gazette_reference && <span><strong>Reference:</strong> {prov.gazette_reference}</span>}
+            </div>
+
+            {prov.official_source_url && (
+              <div className="pt-1">
+                <a
+                  href={prov.official_source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-1 text-primary hover:text-primary-dark font-medium underline text-[11px]"
+                >
+                  <span>Verify at Official Government Portal</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Traceable Entitlement Chain */}
+          <div className="p-3 bg-slate-100 rounded-lg text-[11px] text-slate-600">
+            <span className="font-semibold text-slate-700 block mb-1">Audit-Grade Traceable Chain:</span>
+            <div className="font-mono text-[10px] text-slate-800 flex flex-wrap items-center gap-1.5">
+              <span className="px-1.5 py-0.5 bg-white rounded border">Decision</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 bg-white rounded border">EvaluationTrace</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 bg-white rounded border">Structured Rule</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 bg-white rounded border">{prov.policy_version}</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 bg-white rounded border">{prov.document_version || "Source Document"}</span>
+              <span>→</span>
+              <span className="px-1.5 py-0.5 bg-white rounded border">Official Portal</span>
+            </div>
           </div>
         </div>
       </div>

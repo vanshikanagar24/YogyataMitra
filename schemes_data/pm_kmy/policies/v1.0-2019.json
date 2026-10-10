@@ -1,0 +1,143 @@
+{
+  "scheme_code": "PM_KMY",
+  "policy_version_code": "v1.0-2019",
+  "effective_from": "2019-08-01",
+  "effective_to": null,
+  "source": {
+    "title": "Pradhan Mantri Kisan Maan-Dhan Yojana (PM-KMY) Operational Guidelines 2019",
+    "url": "https://agriwelfare.gov.in/Documents/PMKMYGuidelines.pdf",
+    "reference": "Department of Agriculture, Cooperation & Farmers Welfare, Ministry of Agriculture and Farmers Welfare, GoI",
+    "document_identifier": "DACFW-PMKMY-GUIDELINES-2019"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMKMY-V1-ROOT",
+    "operator": "AND",
+    "description_en": "PM-KMY Statutory Eligibility for Small and Marginal Farmers",
+    "description_hi": "लघु एवं सीमांत किसानों के लिए पीएम-केएमवाई वैधानिक पात्रता",
+    "source_clause": "Clause 2.0 & 3.0",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-AGE-MIN",
+        "operator": "GTE",
+        "field_path": "applicant.age",
+        "expected_value": 18,
+        "description_en": "Applicant must be at least 18 years of age at the time of enrollment",
+        "description_hi": "नामांकन के समय आवेदक की आयु कम से कम 18 वर्ष होनी चाहिए",
+        "source_clause": "Clause 2.1(a)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-AGE-MAX",
+        "operator": "LTE",
+        "field_path": "applicant.age",
+        "expected_value": 40,
+        "description_en": "Applicant must not exceed 40 years of age at the time of enrollment",
+        "description_hi": "नामांकन के समय आवेदक की आयु 40 वर्ष से अधिक नहीं होनी चाहिए",
+        "source_clause": "Clause 2.1(a)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-LAND-OWNERSHIP",
+        "operator": "EQ",
+        "field_path": "family.owns_cultivable_land",
+        "expected_value": true,
+        "description_en": "Farmer family must own cultivable landholding in State/UT revenue records",
+        "description_hi": "किसान परिवार के पास राज्य/केंद्र शासित प्रदेश के राजस्व रिकॉर्ड में कृषि योग्य भूमि होनी चाहिए",
+        "source_clause": "Clause 2.1(b)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-LAND-CEILING-2HA",
+        "operator": "LTE",
+        "field_path": "land.total_land_area_hectares",
+        "expected_value": 2.0,
+        "description_en": "Cultivable landholding must not exceed 2.0 hectares (Small and Marginal Farmer definition)",
+        "description_hi": "कृषि योग्य भूमि 2.0 हेक्टेयर से अधिक नहीं होनी चाहिए (लघु एवं सीमांत किसान परिभाषा)",
+        "source_clause": "Clause 2.1(b)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-LAND-AREA-MIN",
+        "operator": "GT",
+        "field_path": "land.total_land_area_hectares",
+        "expected_value": 0.0,
+        "description_en": "Cultivable landholding must be greater than zero hectares",
+        "description_hi": "कृषि योग्य भूमि शून्य हेक्टेयर से अधिक होनी चाहिए",
+        "source_clause": "Clause 2.1(b)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-LAND-CUTOFF-2019",
+        "operator": "EQ",
+        "field_path": "land.record_date_valid",
+        "expected_value": true,
+        "description_en": "Farmer must hold land record entry on or before the statutory cut-off date of 01.08.2019",
+        "description_hi": "किसान के पास 01.08.2019 की वैधानिक कट-ऑफ तिथि को या उससे पहले का भूमि रिकॉर्ड होना चाहिए",
+        "source_clause": "Clause 2.1(b)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-EXCL-OTHER-PENSION",
+        "operator": "EQ",
+        "field_path": "applicant.has_other_pension_scheme",
+        "expected_value": false,
+        "description_en": "Applicant must not be covered under other statutory social security schemes (NPS, ESIC, EPFO, PM-SYM, PM-LVM)",
+        "description_hi": "आवेदक अन्य वैधानिक सामाजिक सुरक्षा योजनाओं (NPS, ESIC, EPFO, PM-SYM, PM-LVM) के अंतर्गत शामिल नहीं होना चाहिए",
+        "source_clause": "Clause 3.1(a)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-EXCL-INSTITUTIONAL",
+        "operator": "EQ",
+        "field_path": "family.is_institutional_landholder",
+        "expected_value": false,
+        "description_en": "Beneficiary family must not be an institutional landholder",
+        "description_hi": "लाभार्थी परिवार संस्थागत भूमिधारक नहीं होना चाहिए",
+        "source_clause": "Clause 3.1(b)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-EXCL-CONSTITUTIONAL",
+        "operator": "EQ",
+        "field_path": "family.has_constitutional_post_holder",
+        "expected_value": false,
+        "description_en": "No family member may hold or have held a constitutional post",
+        "description_hi": "परिवार का कोई भी सदस्य संवैधानिक पद पर आसीन नहीं होना चाहिए या रहा नहीं होना चाहिए",
+        "source_clause": "Clause 3.1(c)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-EXCL-GOVT-EMPLOYEE",
+        "operator": "EQ",
+        "field_path": "family.has_disqualified_government_employee",
+        "expected_value": false,
+        "description_en": "No family member may be a regular serving or retired government/PSU employee (excluding Group D)",
+        "description_hi": "परिवार का कोई सदस्य नियमित सेवारत या सेवानिवृत्त सरकारी/पीएसयू कर्मचारी नहीं होना चाहिए (ग्रुप डी को छोड़कर)",
+        "source_clause": "Clause 3.1(d)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-EXCL-INCOME-TAX",
+        "operator": "EQ",
+        "field_path": "family.has_income_tax_payer",
+        "expected_value": false,
+        "description_en": "No family member may have paid income tax in the last assessment year",
+        "description_hi": "परिवार के किसी सदस्य ने पिछले कर निर्धारण वर्ष में आयकर का भुगतान न किया हो",
+        "source_clause": "Clause 3.1(e)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMKMY-EXCL-PROFESSIONAL",
+        "operator": "EQ",
+        "field_path": "family.has_registered_practicing_professional",
+        "expected_value": false,
+        "description_en": "No family member may be a registered practicing doctor, engineer, lawyer, CA, or architect",
+        "description_hi": "परिवार का कोई सदस्य पंजीकृत पेशेवर (डॉक्टर, इंजीनियर, वकील, सीए या वास्तुकार) नहीं होना चाहिए",
+        "source_clause": "Clause 3.1(f)"
+      }
+    ]
+  }
+}

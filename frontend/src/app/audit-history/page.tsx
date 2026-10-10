@@ -300,39 +300,43 @@ export default function AuditHistoryPage() {
                 </h3>
                 <div className="bg-gov-bg rounded-lg p-4 border border-gov-border text-xs">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
-                    {Object.entries(persistedTrace.input_snapshot_json).flatMap(([groupKey, groupVal]) => {
-                      if (typeof groupVal === "object" && groupVal !== null) {
-                        return Object.entries(groupVal).map(([k, v]) => {
-                          const fullKey = `${groupKey}.${k}`;
-                          const formatted = formatCitizenValue(v, fullKey, isHindi);
-                          return (
-                            <div
-                              key={fullKey}
-                              className="flex justify-between items-center py-1.5 border-b border-gray-200/60"
-                            >
-                              <span className="text-gov-secondary font-medium">
-                                {getFriendlyFieldTitle(fullKey, isHindi)}
-                              </span>
-                              <span className="font-semibold text-gov-text">
-                                {formatted.text}
-                              </span>
-                            </div>
-                          );
-                        });
-                      }
-                      const formatted = formatCitizenValue(groupVal, groupKey, isHindi);
-                      return (
-                        <div
-                          key={groupKey}
-                          className="flex justify-between items-center py-1.5 border-b border-gray-200/60"
-                        >
-                          <span className="text-gov-secondary font-medium">
-                            {getFriendlyFieldTitle(groupKey, isHindi)}
-                          </span>
-                          <span className="font-semibold text-gov-text">{formatted.text}</span>
-                        </div>
-                      );
-                    })}
+                    {(() => {
+                      const flatten = (obj: any, prefix = ""): { key: string; val: any }[] => {
+                        if (!obj || typeof obj !== "object") return [];
+                        const res: { key: string; val: any }[] = [];
+                        for (const [k, v] of Object.entries(obj)) {
+                          if (k === "_sa_instance_state") continue;
+                          const fullKey = prefix ? `${prefix}.${k}` : k;
+                          if (v !== null && typeof v === "object" && !Array.isArray(v) && !("value" in v)) {
+                            const subEntries = Object.keys(v).filter((sk) => sk !== "_sa_instance_state");
+                            if (subEntries.length > 0) {
+                              res.push(...flatten(v, fullKey));
+                              continue;
+                            }
+                          }
+                          res.push({ key: fullKey, val: v });
+                        }
+                        return res;
+                      };
+
+                      const flatList = flatten(persistedTrace.input_snapshot_json);
+                      return flatList.map(({ key, val }) => {
+                        const formatted = formatCitizenValue(val, key, isHindi);
+                        return (
+                          <div
+                            key={key}
+                            className="flex justify-between items-center py-1.5 border-b border-gray-200/60"
+                          >
+                            <span className="text-gov-secondary font-medium">
+                              {getFriendlyFieldTitle(key, isHindi)}
+                            </span>
+                            <span className="font-semibold text-gov-text">
+                              {formatted.text}
+                            </span>
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               </div>

@@ -55,6 +55,12 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence, onVerify }
               {docPres.title}
             </span>
             <span className="text-[11px] text-gov-secondary block">
+              {evidence.metadata_json?.original_filename ? (
+                <>
+                  <strong className="text-gov-text">{String(evidence.metadata_json.original_filename)}</strong>
+                  {evidence.metadata_json.size_bytes ? ` (${(Number(evidence.metadata_json.size_bytes) / 1024).toFixed(1)} KB) • ` : " • "}
+                </>
+              ) : null}
               {docPres.hint}
             </span>
           </div>

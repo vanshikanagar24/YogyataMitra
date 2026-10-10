@@ -55,6 +55,15 @@ class EvaluationTrace(Base):
         nullable=False,
         index=True,
     )
+    journey_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("evaluation_journeys.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    evaluated_by: Mapped[str | None] = mapped_column(
+        String(128), nullable=True
+    )
     evaluation_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     input_snapshot_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     result_state: Mapped[EligibilityResult] = mapped_column(
@@ -77,6 +86,7 @@ class EvaluationTrace(Base):
     citizen = relationship("Citizen", back_populates="evaluation_traces")
     scheme = relationship("Scheme", back_populates="evaluation_traces")
     policy_version = relationship("PolicyVersion", back_populates="evaluation_traces")
+    journey = relationship("EvaluationJourney", back_populates="evaluation_traces", foreign_keys=[journey_id])
 
     def __repr__(self) -> str:
         return f"<EvaluationTrace(id={self.id}, scheme_id={self.scheme_id}, result={self.result_state.value})>"

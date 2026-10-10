@@ -22,6 +22,35 @@ export interface OfficerLoginResponse {
   environment_notice: string;
 }
 
+export interface OfficerAssignment {
+  id: string;
+  journey_id: string;
+  officer_identity: string;
+  officer_name?: string | null;
+  assigned_by: string;
+  assigned_at: string;
+  due_at: string;
+  sla_duration_hours: number;
+  status: "UNASSIGNED" | "ASSIGNED" | "IN_PROGRESS" | "REASSIGNED" | "COMPLETED" | string;
+  is_active: boolean;
+  reassigned_to_id?: string | null;
+  reassignment_reason?: string | null;
+  sla_status: "NOT_DUE" | "DUE_SOON" | "OVERDUE" | "COMPLETED" | string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OfficerDashboardStats {
+  my_active_requests: number;
+  unassigned_requests: number;
+  due_soon: number;
+  overdue: number;
+  completed: number;
+  total_active_workload: number;
+  max_capacity_per_officer: number;
+  default_sla_duration_hours: number;
+}
+
 export interface OfficerQueueItem {
   journey_id: string;
   citizen_ref: string;
@@ -34,7 +63,14 @@ export interface OfficerQueueItem {
   evidence_count: number;
   verified_evidence_count: number;
   automated_eligibility?: string | null;
+  assigned_officer?: string | null;
+  assigned_officer_name?: string | null;
+  assignment_status?: string;
+  assigned_at?: string | null;
+  due_at?: string | null;
+  sla_status?: "NOT_DUE" | "DUE_SOON" | "OVERDUE" | "COMPLETED" | string;
 }
+
 
 export interface OfficerQueueMetrics {
   total_cases: number;
@@ -91,6 +127,9 @@ export interface OfficerAssessmentRule {
   description: string;
   result: "PASS" | "FAIL" | "UNKNOWN" | string;
   details?: string | null;
+  operator?: string | null;
+  expected_value?: string | null;
+  actual_value?: string | null;
 }
 
 export interface OfficerAssessment {
@@ -102,6 +141,8 @@ export interface OfficerAssessment {
   rules_evaluated: OfficerAssessmentRule[];
   missing_facts: string[];
   disqualifiers: string[];
+  reasons_en?: string[];
+  reasons_hi?: string[];
 }
 
 export interface OfficerPolicyProvenance {
@@ -117,6 +158,11 @@ export interface OfficerPolicyProvenance {
   issuing_authority: string;
   rule_definitions_count: number;
   is_statutory_source_verified: boolean;
+  document_title?: string | null;
+  document_version?: string | null;
+  document_hash?: string | null;
+  official_source_url?: string | null;
+  provenance_completeness?: string | null;
 }
 
 export interface OfficerAuditEvent {
@@ -151,6 +197,57 @@ export interface OfficerCaseDetail {
   automated_assessment?: OfficerAssessment | null;
   policy_provenance?: OfficerPolicyProvenance | null;
   audit_history: OfficerAuditEvent[];
+  active_assignment?: OfficerAssignment | null;
+  assignment_history?: OfficerAssignment[];
+  clarifications?: OfficerClarificationItem[];
+  verification_status?: string | null;
+}
+
+export interface OfficerClarificationItem {
+  id: string;
+  journey_id: string;
+  evidence_id?: string | null;
+  claim_id?: string | null;
+  round: number;
+  requesting_officer: string;
+  requesting_officer_role: string;
+  request_reason: string;
+  notes?: string | null;
+  status: string;
+  requested_at: string;
+  response_text?: string | null;
+  responded_at?: string | null;
+  replacement_evidence_id?: string | null;
+  resolution_notes?: string | null;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
+  created_at: string;
+}
+
+export interface OfficerVerificationHistoryResponse {
+  journey_id: string;
+  verification_status: string;
+  current_round: number;
+  verification_records: OfficerVerificationRecord[];
+  clarification_requests: OfficerClarificationItem[];
+  audit_events: OfficerAuditEvent[];
+}
+
+export interface OfficerClarificationRequestPayload {
+  reason: string;
+  notes?: string | null;
+}
+
+export interface OfficerAssignmentPayload {
+  officer_identity: string;
+  sla_hours?: number;
+  reason?: string;
+}
+
+export interface OfficerReassignmentPayload {
+  new_officer_identity: string;
+  reason: string;
+  sla_hours?: number;
 }
 
 export interface OfficerEvidenceVerifyPayload {

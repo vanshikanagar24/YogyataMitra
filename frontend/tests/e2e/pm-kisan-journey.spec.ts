@@ -157,6 +157,13 @@ test.describe("PM-KISAN Complete Citizen Entitlement Flow", () => {
   test("Navigates from Homepage to PM-KISAN scheme details and completes eligibility journey", async ({
     page,
   }) => {
+    // Authenticate as demo citizen
+    await page.goto("/citizen/login");
+    await page.getByRole("button", { name: /Auto Fill|स्वतः भरें/i }).click();
+    await expect(page.locator("#citizen-identifier")).toHaveValue("citizen.test@yogyatamitra.local");
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/.*citizen\/dashboard/, { timeout: 15000 });
+
     await page.goto("/");
     await expect(page).toHaveTitle(/योग्यता मित्र/);
     await expect(page.locator("h1")).toContainText(/आपके लिए/);

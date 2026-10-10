@@ -131,6 +131,13 @@ test.describe("SSY Complete Citizen Entitlement Flow", () => {
   test("Navigates to Sukanya Samriddhi Yojana and tests eligibility journey", async ({
     page,
   }) => {
+    // Authenticate as demo citizen
+    await page.goto("/citizen/login");
+    await page.getByRole("button", { name: /Auto Fill|स्वतः भरें/i }).click();
+    await expect(page.locator("#citizen-identifier")).toHaveValue("citizen.test@yogyatamitra.local");
+    await page.locator('button[type="submit"]').click();
+    await expect(page).toHaveURL(/.*citizen\/dashboard/, { timeout: 15000 });
+
     await page.goto("/");
 
     // Click SSY chip in Hero

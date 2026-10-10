@@ -78,3 +78,40 @@ def require_role(allowed_roles: List[str]) -> Callable:
         return current_officer
 
     return role_checker
+
+
+async def get_current_citizen(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(http_bearer),
+) -> Dict[str, Any]:
+    """Validate Bearer JWT token and ensure caller is an authenticated citizen."""
+    if not credentials or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication credentials were not provided or are invalid",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = credentials.credentials
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired citizen authentication token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    role = payload.get("role")
+    if role != "CITIZEN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access forbidden: Officer accounts must use internal portal endpoints",
+        )
+
+    return {
+        "email": payload.get("sub"),
+        "role": role,
+        "name": payload.get("name"),
+        "citizen_ref": payload.get("citizen_ref"),
+        "state": payload.get("state"),
+        "district": payload.get("district"),
+    }

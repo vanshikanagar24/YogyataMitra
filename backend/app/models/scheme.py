@@ -24,6 +24,7 @@ from app.models.enums import SchemeStatus
 
 if TYPE_CHECKING:
     from app.models.evaluation import EvaluationTrace
+    from app.models.provenance import PolicySourceBinding, RuleProvenance
 
 
 class Scheme(Base):
@@ -127,6 +128,16 @@ class PolicyVersion(Base):
     )
     evaluation_traces: Mapped[List["EvaluationTrace"]] = relationship(
         "EvaluationTrace", back_populates="policy_version"
+    )
+    source_bindings: Mapped[List["PolicySourceBinding"]] = relationship(
+        "PolicySourceBinding",
+        back_populates="policy_version",
+        cascade="all, delete-orphan",
+    )
+    rule_provenances: Mapped[List["RuleProvenance"]] = relationship(
+        "RuleProvenance",
+        back_populates="policy_version",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self) -> str:

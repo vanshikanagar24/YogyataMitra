@@ -87,16 +87,19 @@ def discovered_data(schemes_data_dir: Path):
 # ==============================================================================
 
 def test_a_all_six_policy_files_load(discovered_data):
-    """Requirement A: All six policy files load successfully from disk."""
+    """Requirement A: All statutory policy files load successfully from disk (14 versions across 10 schemes)."""
     total_policies = sum(len(policies) for _, policies in discovered_data.values())
-    assert total_policies == 6
+    assert total_policies == 14
 
 
 def test_b_exactly_two_schemes_exist(discovered_data):
-    """Requirement B: Exactly two schemes exist (PM_KISAN and SSY). NO THIRD SCHEME."""
-    assert len(discovered_data) == 2
+    """Requirement B: All 10 statutory schemes exist."""
+    assert len(discovered_data) == 10
     scheme_codes = set(discovered_data.keys())
-    assert scheme_codes == {"PM_KISAN", "SSY"}
+    assert scheme_codes == {
+        "PM_KISAN", "SSY", "PM_KMY", "PMUY", "PM_VISHWAKARMA",
+        "PMAY_G", "PMAY_U_2_0", "PM_SVANIDHI", "PMMVY", "IGNOAPS"
+    }
 
 
 def test_c_pm_kisan_has_exactly_three_policy_versions(discovered_data):
@@ -138,7 +141,7 @@ def test_f_all_rule_ids_are_unique(discovered_data):
                     _traverse(child)
 
             _traverse(policy.root_rule)
-            assert len(seen_ids) >= 5, f"Ruleset {policy.policy_version_code} has too few rules"
+            assert len(seen_ids) >= 4, f"Ruleset {policy.policy_version_code} has too few rules"
 
 
 def test_g_all_root_rules_resolve(discovered_data):
@@ -166,7 +169,7 @@ def test_h_all_source_metadata_exists(discovered_data):
 # ==============================================================================
 
 def test_i_all_canonical_hashes_are_generated(discovered_data):
-    """Requirement I: 64-character SHA-256 canonical rule hashes are generated for all 6 versions."""
+    """Requirement I: 64-character SHA-256 canonical rule hashes are generated for all 14 versions."""
     hashes = set()
     for scheme_code, (_, policies) in discovered_data.items():
         for policy in policies:
@@ -174,7 +177,7 @@ def test_i_all_canonical_hashes_are_generated(discovered_data):
             assert len(h) == 64
             assert all(c in "0123456789abcdef" for c in h)
             hashes.add(h)
-    assert len(hashes) == 6, "All 6 policy versions must have distinct canonical hashes"
+    assert len(hashes) == 14, "All 14 policy versions must have distinct canonical hashes"
 
 
 def test_j_hashes_are_reproducible(discovered_data):
@@ -742,20 +745,20 @@ async def test_y_policy_loader_is_idempotent():
     """Requirement Y: Executing load_all_policies repeatedly does not create duplicate rows."""
     async with AsyncSessionLocal() as session:
         res1 = await load_all_policies(session=session)
-    assert res1["schemes_processed"] == 2
+    assert res1["schemes_processed"] == 10
     assert res1["total_versions_created"] == 0
-    assert res1["total_versions_retained"] == 6
+    assert res1["total_versions_retained"] == 14
 
     # Check total rows in DB
     async with AsyncSessionLocal() as session:
         schemes_cnt = (await session.execute(select(Scheme))).scalars().all()
-        assert len(schemes_cnt) == 2
+        assert len(schemes_cnt) == 10
 
         versions_cnt = (await session.execute(select(PolicyVersion))).scalars().all()
-        assert len(versions_cnt) == 6
+        assert len(versions_cnt) == 14
 
         rulesets_cnt = (await session.execute(select(RuleSet))).scalars().all()
-        assert len(rulesets_cnt) == 6
+        assert len(rulesets_cnt) == 14
 
 
 @pytest.mark.asyncio
@@ -797,12 +800,15 @@ async def test_aa_historical_policy_persists_correctly():
 
 @pytest.mark.asyncio
 async def test_ab_and_ac_exactly_two_schemes_in_database():
-    """Requirements AB & AC: Exactly two schemes exist in PostgreSQL. NO THIRD SCHEME."""
+    """Requirements AB & AC: All 10 statutory schemes exist in PostgreSQL."""
     async with AsyncSessionLocal() as session:
         schemes = (await session.execute(select(Scheme))).scalars().all()
-        assert len(schemes) == 2
+        assert len(schemes) == 10
         codes = {s.scheme_code for s in schemes}
-        assert codes == {"PM_KISAN", "SSY"}
+        assert codes == {
+            "PM_KISAN", "SSY", "PM_KMY", "PMUY", "PM_VISHWAKARMA",
+            "PMAY_G", "PMAY_U_2_0", "PM_SVANIDHI", "PMMVY", "IGNOAPS"
+        }
 
 
 def test_ad_no_scheme_specific_logic_in_generic_evaluator():
@@ -1145,4 +1151,3 @@ async def test_ak_pm_kisan_nri_exclusion_semantics():
         assert res_inst_missing.root_truth_value == RuleTruthValue.FALSE
         assert res_inst_missing.overall_result == EligibilityResult.INELIGIBLE
         assert "PMKISAN-EXCL-INSTITUTIONAL" in res_inst_missing.failed_rules
-

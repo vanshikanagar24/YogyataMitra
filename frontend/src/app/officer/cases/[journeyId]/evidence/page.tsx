@@ -141,6 +141,11 @@ export default function CaseEvidencePage() {
                       <XCircle className="w-3.5 h-3.5" />
                       <span>REJECTED</span>
                     </span>
+                  ) : ev.status === "CLARIFICATION_REQUIRED" ? (
+                    <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-bold bg-orange-100 text-orange-800 border border-orange-200">
+                      <AlertCircle className="w-3.5 h-3.5" />
+                      <span>CLARIFICATION REQUIRED</span>
+                    </span>
                   ) : (
                     <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
                       <Clock className="w-3.5 h-3.5" />
@@ -186,6 +191,57 @@ export default function CaseEvidencePage() {
                     <span className="font-bold">Rejection Justification: </span>
                     <span>{ev.rejection_reason}</span>
                   </div>
+                </div>
+              )}
+
+              {/* Clarification Requests and Responses */}
+              {caseData.clarifications && caseData.clarifications.filter((c) => c.evidence_id === ev.id).length > 0 && (
+                <div className="border-t border-slate-100 pt-3 space-y-2">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                    Clarification Requests & Responses:
+                  </div>
+                  {caseData.clarifications
+                    .filter((c) => c.evidence_id === ev.id)
+                    .map((c) => (
+                      <div
+                        key={c.id}
+                        className="p-3 bg-amber-50/70 border border-amber-200 rounded-lg text-xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-amber-900">
+                            Round {c.round}: Clarification {c.status}
+                          </span>
+                          <span className="text-[11px] text-amber-700">
+                            Requested: {new Date(c.requested_at).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <p className="text-slate-700">
+                          <strong>Reason:</strong> {c.request_reason}
+                        </p>
+                        {c.notes && (
+                          <p className="text-slate-600 italic">
+                            <strong>Officer Notes:</strong> {c.notes}
+                          </p>
+                        )}
+                        {c.response_text ? (
+                          <div className="p-2.5 bg-white border border-amber-300 rounded text-slate-800 space-y-1">
+                            <div className="text-[11px] font-bold text-slate-500 uppercase">
+                              Citizen Response ({c.responded_at ? new Date(c.responded_at).toLocaleString("en-IN") : "Submitted"}):
+                            </div>
+                            <p className="text-xs">{c.response_text}</p>
+                            {c.replacement_evidence_id && (
+                              <div className="text-[11px] text-blue-700 font-mono">
+                                Replacement Evidence Ref: {c.replacement_evidence_id}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-amber-700 font-medium">
+                            Awaiting citizen response...
+                          </p>
+                        )}
+                      </div>
+                    ))}
                 </div>
               )}
 

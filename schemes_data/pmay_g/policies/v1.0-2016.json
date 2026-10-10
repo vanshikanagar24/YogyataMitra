@@ -1,0 +1,133 @@
+{
+  "scheme_code": "PMAY_G",
+  "policy_version_code": "v1.0-2016",
+  "effective_from": "2016-04-01",
+  "effective_to": null,
+  "source": {
+    "title": "Framework for Implementation of Pradhan Mantri Awaas Yojana - Gramin",
+    "url": "https://pmayg.nic.in/netiay/Framework_English.pdf",
+    "reference": "Department of Rural Development, Ministry of Rural Development, GoI",
+    "document_identifier": "MORD-PMAYG-FRAMEWORK-2016"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMAYG-V1-ROOT",
+    "operator": "AND",
+    "description_en": "PMAY-G Statutory Housing Assistance Eligibility for Rural Deprived Households",
+    "description_hi": "ग्रामीण वंचित परिवारों के लिए पीएमएवाई-जी वैधानिक आवास सहायता पात्रता",
+    "source_clause": "Framework Chapter 2 & Annexure 1",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-RURAL-RESIDENCE",
+        "operator": "EQ",
+        "field_path": "location.is_rural_area",
+        "expected_value": true,
+        "description_en": "Household must reside within a rural Gram Panchayat jurisdiction",
+        "description_hi": "परिवार को ग्रामीण ग्राम पंचायत अधिकार क्षेत्र में निवास करना चाहिए",
+        "source_clause": "Section 2.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-NO-PUCCA-HOUSE",
+        "operator": "EQ",
+        "field_path": "housing.owns_pucca_house",
+        "expected_value": false,
+        "description_en": "Household must not own a pucca (all-weather permanent) house anywhere in India",
+        "description_hi": "परिवार के पास भारत में कहीं भी पक्का (स्थायी) मकान नहीं होना चाहिए",
+        "source_clause": "Section 2.2"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-KUTCHA-DWELLING",
+        "operator": "EQ",
+        "field_path": "housing.house_type",
+        "expected_value": "KUTCHA",
+        "description_en": "Household must be houseless or living in kutcha walls and kutcha roof dwelling",
+        "description_hi": "परिवार बेघर होना चाहिए या कच्ची दीवारों और कच्ची छत वाले मकान में रह रहा होना चाहिए",
+        "source_clause": "Section 2.2"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-VEHICLE",
+        "operator": "EQ",
+        "field_path": "exclusions.owns_motorized_three_four_wheeler",
+        "expected_value": false,
+        "description_en": "Household must not own a motorised three or four wheeler vehicle",
+        "description_hi": "परिवार के पास तिपहिया या चार पहिया मोटर वाहन नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 1)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-AGRI-EQUIP",
+        "operator": "EQ",
+        "field_path": "exclusions.owns_mechanized_agri_equipment",
+        "expected_value": false,
+        "description_en": "Household must not own mechanised three/four wheeler agricultural equipment",
+        "description_hi": "परिवार के पास तीन/चार पहिया यंत्रीकृत कृषि उपकरण नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 2)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-KCC-LIMIT",
+        "operator": "EQ",
+        "field_path": "exclusions.kcc_limit_above_fifty_thousand",
+        "expected_value": false,
+        "description_en": "Household must not hold a Kisan Credit Card with credit limit of Rs 50,000 or above",
+        "description_hi": "परिवार के पास 50,000 रुपये या उससे अधिक की ऋण सीमा वाला किसान क्रेडिट कार्ड नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 3)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-GOVT-SERVANT",
+        "operator": "EQ",
+        "field_path": "family.has_government_employee",
+        "expected_value": false,
+        "description_en": "Household must not have any member as a regular Government employee",
+        "description_hi": "परिवार का कोई भी सदस्य नियमित सरकारी कर्मचारी नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 4)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-INCOME-15K",
+        "operator": "EQ",
+        "field_path": "family.has_member_earning_above_fifteen_thousand",
+        "expected_value": false,
+        "description_en": "Household must not have any member earning more than Rs 15,000 per month",
+        "description_hi": "परिवार का कोई भी सदस्य 15,000 रुपये प्रति माह से अधिक कमाने वाला नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 6)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-INCOME-TAX",
+        "operator": "EQ",
+        "field_path": "family.has_income_tax_payer",
+        "expected_value": false,
+        "description_en": "No member of the household may be paying income tax",
+        "description_hi": "परिवार का कोई भी सदस्य आयकर दाता नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 7)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-PROF-TAX",
+        "operator": "EQ",
+        "field_path": "family.has_professional_tax_payer",
+        "expected_value": false,
+        "description_en": "No member of the household may be paying professional tax",
+        "description_hi": "परिवार का कोई भी सदस्य व्यवसाय कर (प्रोफेशनल टैक्स) दाता नहीं होना चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 8)"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYG-EXCL-IRRIGATED-LAND",
+        "operator": "LT",
+        "field_path": "land.irrigated_land_acres",
+        "expected_value": 2.5,
+        "description_en": "Household must own strictly less than 2.5 acres of irrigated land",
+        "description_hi": "परिवार के पास 2.5 एकड़ से कम सिंचित भूमि होनी चाहिए",
+        "source_clause": "Annexure 1 (Exclusion 9)"
+      }
+    ]
+  }
+}

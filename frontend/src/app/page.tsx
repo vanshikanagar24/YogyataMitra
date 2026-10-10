@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Search, ArrowRight, ChevronRight, Landmark, ShieldCheck, FileCheck, Scale, History } from "lucide-react";
 import { useLanguage } from "../context/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 import { TrustCard } from "../components/common/TrustCard";
 import { SchemeCard } from "../components/schemes/SchemeCard";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +37,12 @@ export default function HomePage() {
       router.push(`/schemes?q=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
+
+  const { isAuthenticated, role } = useAuth();
+  const checkEligibilityHref =
+    isAuthenticated && role === "CITIZEN"
+      ? "/eligibility"
+      : "/citizen/login?redirect=/eligibility";
 
   return (
     <div className="space-y-12 sm:space-y-16">
@@ -72,7 +79,7 @@ export default function HomePage() {
               {/* Primary & Secondary Citizen Action CTAs */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                 <Link
-                  href="/eligibility"
+                  href={checkEligibilityHref}
                   className="inline-flex items-center justify-center space-x-2 px-6 py-3.5 bg-amber-400 hover:bg-amber-300 text-navy-900 rounded-lg text-sm font-extrabold shadow-md transition-all hover:scale-[1.01] focus-visible:ring-2 focus-visible:ring-white min-h-[48px] text-center"
                 >
                   <span>{t("hero.check_eligibility_cta")}</span>

@@ -53,3 +53,32 @@ node_modules/
 .next/
 out/
 .vercel
+
+# Local environment files and secrets
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Python environments and caches
+backend/.venv/
+**/__pycache__/
+.pytest_cache/
+
+# Frontend build and dependency artifacts
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Generated browser test artifacts
+frontend/playwright-report/
+frontend/test-results/
+frontend/tsconfig.tsbuildinfo
+
+# Local uploads and user-provided documents
+uploads/
+
+# Local backup files
+*.bak

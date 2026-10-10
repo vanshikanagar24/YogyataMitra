@@ -3,6 +3,7 @@
 import React from "react";
 import { ShieldAlert, Hash, FileCode, Database, ExternalLink } from "lucide-react";
 import { AuditPolicyDetails } from "../../types/audit";
+import { getOfficialSourceUrl } from "../../utils/officialSources";
 
 interface AuditPolicyViewProps {
   policy: AuditPolicyDetails;
@@ -89,12 +90,13 @@ export const AuditPolicyView: React.FC<AuditPolicyViewProps> = ({ policy }) => {
             Document ID: <span className="text-slate-200">{policy.source_document_identifier}</span>
           </div>
         )}
-        {policy.source_url && (
+        {getOfficialSourceUrl(policy.scheme_code, policy.source_url) && (
           <div className="pt-1">
             <a
-              href={policy.source_url}
+              href={getOfficialSourceUrl(policy.scheme_code, policy.source_url)}
               target="_blank"
               rel="noopener noreferrer"
+              aria-label={`Verify Official Source Document (${policy.scheme_code})`}
               className="inline-flex items-center space-x-1 text-cyan-400 hover:text-cyan-300 hover:underline"
             >
               <span>Verify Official Source Document</span>

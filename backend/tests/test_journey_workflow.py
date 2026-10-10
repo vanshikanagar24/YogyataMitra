@@ -822,3 +822,76 @@ async def test_journey_citizen_reference_no_invented_pii(async_client: AsyncClie
         assert citizen.gender is None
         assert citizen.state is None
         assert citizen.district is None
+
+
+# ==============================================================================
+# 7. Supporting Evidence File Upload Tests
+# ==============================================================================
+
+@pytest.mark.asyncio
+async def test_journey_upload_evidence_success(async_client: AsyncClient):
+    """Uploading a document file via multipart/form-data attaches evidence in PENDING status."""
+    create_res = await async_client.post("/api/v1/journeys", json={
+        "citizen_ref": f"CIT-UPLOAD-{uuid.uuid4().hex[:8].upper()}",
+        "scheme_code": "PM_KISAN",
+    })
+    j_id = create_res.json()["id"]
+
+    claim_res = await async_client.post(f"/api/v1/journeys/{j_id}/claims", json={
+        "claim_type": "family.owns_cultivable_land",
+        "value_json": {"value": True},
+        "source": "SELF_DECLARATION",
+    })
+    claim_id = claim_res.json()["id"]
+
+    file_content = b"%PDF-1.4 demo test pdf content"
+    files = {"file": ("khasra_7_12.pdf", file_content, "application/pdf")}
+    data = {"evidence_type": "LAND_RECORD_7_12"}
+
+    upload_res = await async_client.post(
+        f"/api/v1/journeys/{j_id}/claims/{claim_id}/evidence/upload",
+        files=files,
+        data=data,
+    )
+    assert upload_res.status_code == 201
+    ev_data = upload_res.json()
+    assert ev_data["status"] == "PENDING"
+    assert ev_data["evidence_type"] == "LAND_RECORD_7_12"
+    assert ev_data["metadata_json"]["original_filename"] == "khasra_7_12.pdf"
+    assert ev_data["metadata_json"]["size_bytes"] == len(file_content)
+
+    # Verify downloading the file
+    ev_id = ev_data["id"]
+    download_res = await async_client.get(f"/api/v1/journeys/{j_id}/evidence/{ev_id}/file")
+    assert download_res.status_code == 200
+    assert download_res.content == file_content
+
+
+@pytest.mark.asyncio
+async def test_journey_upload_evidence_unsupported_type(async_client: AsyncClient):
+    """Uploading an unsupported file extension is rejected with 400."""
+    create_res = await async_client.post("/api/v1/journeys", json={
+        "citizen_ref": f"CIT-BADEXT-{uuid.uuid4().hex[:8].upper()}",
+        "scheme_code": "PM_KISAN",
+    })
+    j_id = create_res.json()["id"]
+
+    claim_res = await async_client.post(f"/api/v1/journeys/{j_id}/claims", json={
+        "claim_type": "family.owns_cultivable_land",
+        "value_json": {"value": True},
+        "source": "SELF_DECLARATION",
+    })
+    claim_id = claim_res.json()["id"]
+
+    files = {"file": ("malicious.exe", b"malware content", "application/octet-stream")}
+    data = {"evidence_type": "LAND_RECORD_7_12"}
+
+    upload_res = await async_client.post(
+        f"/api/v1/journeys/{j_id}/claims/{claim_id}/evidence/upload",
+        files=files,
+        data=data,
+    )
+    assert upload_res.status_code == 400
+    err_body = upload_res.json()
+    err_msg = err_body.get("error", {}).get("message") or err_body.get("detail", "")
+    assert "Unsupported file type" in err_msg

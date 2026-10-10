@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   ArrowRight,
@@ -9,6 +9,9 @@ import {
   AlertTriangle,
   Loader2,
   Info,
+  UploadCloud,
+  FileText,
+  X,
 } from "lucide-react";
 import { Breadcrumbs } from "../../components/layout/Breadcrumbs";
 import { PageHeader } from "../../components/layout/PageHeader";
@@ -18,10 +21,12 @@ import { EvaluationResultCard } from "../../components/evaluation/EvaluationResu
 import { ExplainabilityView } from "../../components/evaluation/ExplainabilityView";
 import { LoadingState } from "../../components/common/FeedbackStates";
 import { useLanguage } from "../../context/LanguageContext";
+import { useAuth } from "../../context/AuthContext";
 import {
   createJourney,
   addJourneyClaim,
   addJourneyEvidence,
+  uploadJourneyEvidence,
   verifyJourneyEvidence,
 } from "../../api/journeys";
 import { evaluateEligibility } from "../../api/evaluations";
@@ -31,6 +36,7 @@ import { EvidenceStatus } from "../../types/enums";
 
 function EligibilityJourneyContent() {
   const { isHindi, t } = useLanguage();
+  const { citizen } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -40,7 +46,7 @@ function EligibilityJourneyContent() {
   const [currentStep, setCurrentStep] = useState<StepId>("facts");
   const [selectedScheme, setSelectedScheme] = useState<string>(initialScheme);
   const [evaluationDate] = useState<string>(() => new Date().toISOString().split("T")[0]);
-  const [citizenRef] = useState<string>("SYN-CIT-2026-001");
+  const citizenRef = citizen?.citizen_ref || "SYN-CIT-DEMO0001";
 
   // Facts form state for PM-KISAN
   const [pmKisanFacts, setPmKisanFacts] = useState({
@@ -80,7 +86,9 @@ function EligibilityJourneyContent() {
   // Evidence modal state
   const [evidenceModalClaimId, setEvidenceModalClaimId] = useState<string | null>(null);
   const [evidenceTypeInput, setEvidenceTypeInput] = useState("");
-  const [evidenceRefInput, setEvidenceRefInput] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileUploadError, setFileUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (schemeParam && (schemeParam.toUpperCase() === "SSY" || schemeParam.toUpperCase() === "PM_KISAN")) {
@@ -218,31 +226,61 @@ function EligibilityJourneyContent() {
   // Open Evidence Attachment Modal
   const handleOpenEvidenceModal = (claimId: string) => {
     setEvidenceModalClaimId(claimId);
+    setSelectedFile(null);
+    setFileUploadError(null);
     const targetClaim = journeyClaims.find((c) => c.id === claimId);
     if (targetClaim?.claim_type.includes("land")) {
       setEvidenceTypeInput("LAND_RECORD_7_12");
-      setEvidenceRefInput("UP-REV-2024-KHASRA-88");
     } else if (targetClaim?.claim_type.includes("birth") || targetClaim?.claim_type.includes("gender")) {
       setEvidenceTypeInput("BIRTH_CERTIFICATE");
-      setEvidenceRefInput("MCD-CIVIL-2016-09412");
     } else if (targetClaim?.claim_type.includes("tax")) {
       setEvidenceTypeInput("ITR_ACKNOWLEDGEMENT");
-      setEvidenceRefInput("ITR-V-ACK-2023-8891");
     } else {
       setEvidenceTypeInput("SUPPORTING_AFFIDAVIT");
-      setEvidenceRefInput("AFFIDAVIT-NOTARY-001");
     }
   };
 
-  // Attach Evidence
+  // Handle local file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate size (10 MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      setFileUploadError(t("forms.modal_file_too_large") || "File size exceeds the 10 MB limit.");
+      setSelectedFile(null);
+      return;
+    }
+
+    // Validate extension
+    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+    const allowed = [".pdf", ".jpg", ".jpeg", ".png", ".docx"];
+    if (!allowed.includes(ext)) {
+      setFileUploadError(t("forms.modal_invalid_type") || "Unsupported file format. Please upload PDF, JPG, PNG, or DOCX.");
+      setSelectedFile(null);
+      return;
+    }
+
+    setSelectedFile(file);
+    setFileUploadError(null);
+  };
+
+  // Attach Evidence via multipart upload
   const handleAttachEvidence = async () => {
     if (!activeJourney || !evidenceModalClaimId) return;
+    if (!selectedFile) {
+      setFileUploadError(t("forms.modal_no_file_error") || "Please select a document before uploading.");
+      return;
+    }
     setLoading(true);
+    setFileUploadError(null);
     try {
-      const newEv = await addJourneyEvidence(activeJourney.id, evidenceModalClaimId, {
-        evidence_type: evidenceTypeInput || "SUPPORTING_DOCUMENT",
-        storage_reference: evidenceRefInput || "DOC-REF-001",
-      });
+      const newEv = await uploadJourneyEvidence(
+        activeJourney.id,
+        evidenceModalClaimId,
+        selectedFile,
+        evidenceTypeInput || "SUPPORTING_DOCUMENT"
+      );
 
       setJourneyClaims((prev) =>
         prev.map((c) => {
@@ -256,8 +294,9 @@ function EligibilityJourneyContent() {
         })
       );
       setEvidenceModalClaimId(null);
+      setSelectedFile(null);
     } catch (err: any) {
-      setErrorMessage(err?.message || "Failed to attach evidence document");
+      setFileUploadError(err?.message || "Failed to attach evidence document");
     } finally {
       setLoading(false);
     }
@@ -838,36 +877,122 @@ function EligibilityJourneyContent() {
                 </select>
               </div>
 
+              {/* Native Document File Picker & Preview */}
               <div>
-                <label htmlFor="evidence-ref-input" className="block font-semibold text-gov-text mb-1">
-                  {t("forms.modal_ref_label")}
+                <label className="block font-semibold text-gov-text mb-1">
+                  {t("forms.modal_choose_file") || "Choose Document"}
                 </label>
                 <input
-                  id="evidence-ref-input"
-                  type="text"
-                  value={evidenceRefInput}
-                  onChange={(e) => setEvidenceRefInput(e.target.value)}
-                  placeholder={t("forms.modal_ref_placeholder")}
-                  className="w-full p-2.5 border border-gov-border rounded text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-primary min-h-[38px]"
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".pdf,.jpg,.jpeg,.png,.docx"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  id="native-evidence-file-input"
                 />
+
+                {!selectedFile ? (
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        fileInputRef.current?.click();
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    className="border-2 border-dashed border-gray-300 hover:border-primary rounded-lg p-5 text-center cursor-pointer transition-colors bg-gray-50/50 hover:bg-primary-50/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    <UploadCloud className="w-8 h-8 text-primary mx-auto mb-2" aria-hidden="true" />
+                    <p className="font-semibold text-gov-text text-xs">
+                      {t("forms.modal_file_dropzone") || "Click or browse to select document from your computer"}
+                    </p>
+                    <p className="text-[11px] text-gov-secondary mt-1">
+                      {t("forms.modal_file_types") || "Accepted formats: PDF, JPG, PNG, DOCX (Max: 10 MB)"}
+                    </p>
+                    <div className="mt-3">
+                      <span className="inline-flex items-center px-3 py-1.5 rounded bg-white border border-gov-border text-xs font-semibold text-primary hover:bg-gray-50 shadow-2xs">
+                        {t("forms.modal_choose_file") || "Choose Document"}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-primary-50/50 border border-primary-200 rounded-lg p-3.5 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        <div className="p-2 rounded bg-white border border-primary-200 text-primary flex-shrink-0">
+                          <FileText className="w-5 h-5" aria-hidden="true" />
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-bold text-gov-text block truncate text-xs">
+                            {selectedFile.name}
+                          </span>
+                          <span className="text-[11px] text-gov-secondary block">
+                            {selectedFile.size > 1024 * 1024
+                              ? `${(selectedFile.size / (1024 * 1024)).toFixed(2)} MB`
+                              : `${(selectedFile.size / 1024).toFixed(1)} KB`}
+                            {" • "}
+                            {selectedFile.name.split(".").pop()?.toUpperCase() || "DOC"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        className="inline-flex items-center space-x-1 px-2 py-1 rounded text-xs font-semibold text-danger hover:bg-red-50 border border-red-200 transition-colors flex-shrink-0"
+                        title={t("forms.modal_remove_file") || "Remove"}
+                      >
+                        <X className="w-3.5 h-3.5" aria-hidden="true" />
+                        <span>{t("forms.modal_remove_file") || "Remove"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Validation / Upload Error Banner */}
+                {fileUploadError && (
+                  <div className="mt-2 p-2.5 rounded bg-red-50 border border-red-200 text-danger-700 text-xs flex items-center space-x-2">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                    <span>{fileUploadError}</span>
+                  </div>
+                )}
               </div>
             </div>
 
             <div className="pt-3 flex items-center justify-end space-x-2">
               <button
                 type="button"
-                onClick={() => setEvidenceModalClaimId(null)}
+                onClick={() => {
+                  setEvidenceModalClaimId(null);
+                  setSelectedFile(null);
+                  setFileUploadError(null);
+                }}
                 className="px-3.5 py-2 border border-gov-border rounded text-xs text-gov-secondary hover:text-gov-text min-h-[36px] focus-visible:ring-2 focus-visible:ring-primary"
               >
                 {t("forms.cancel")}
               </button>
               <button
                 type="button"
-                disabled={loading}
+                disabled={loading || !selectedFile}
                 onClick={handleAttachEvidence}
-                className="px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded text-xs font-bold transition-colors min-h-[36px] focus-visible:ring-2 focus-visible:ring-primary"
+                className="px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-50 text-white rounded text-xs font-bold transition-colors min-h-[36px] focus-visible:ring-2 focus-visible:ring-primary inline-flex items-center space-x-1.5"
               >
-                {loading ? t("common.loading") : t("forms.attach_artifact")}
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
+                    <span>{t("forms.modal_uploading") || "Uploading..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <UploadCloud className="w-4 h-4" aria-hidden="true" />
+                    <span>{t("forms.modal_upload_cta") || "Upload Document"}</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

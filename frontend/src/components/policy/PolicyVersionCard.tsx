@@ -10,6 +10,7 @@ import {
   getPolicyTimelineStatus,
   getTimelineStatusLabel,
 } from "../../utils/rulePresentation";
+import { getOfficialSourceUrl, getOfficialSourceTitle } from "../../utils/officialSources";
 
 interface PolicyVersionCardProps {
   policy: PolicyVersionDetail;
@@ -35,6 +36,9 @@ export const PolicyVersionCard: React.FC<PolicyVersionCardProps> = ({ policy, in
     policy.version_code,
     isHindi
   );
+
+  const officialSourceUrl = getOfficialSourceUrl(policy.scheme_code, policy.source_url);
+  const officialSourceTitle = getOfficialSourceTitle(policy.scheme_code, isHindi, policy.source_title);
 
   const isCurrent = timelineStatus === "CURRENT";
 
@@ -114,13 +118,13 @@ export const PolicyVersionCard: React.FC<PolicyVersionCardProps> = ({ policy, in
           <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
         </Link>
 
-        {policy.source_url && (
+        {officialSourceUrl && (
           <a
-            href={policy.source_url}
+            href={officialSourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`${t("claims.view_official_source")} — ${policy.source_title} (${t("a11y.external_link")})`}
-            className="inline-flex items-center space-x-1 text-xs font-semibold text-gov-secondary hover:text-gov-text focus-visible:ring-2 focus-visible:ring-primary rounded p-1"
+            aria-label={`${t("claims.view_official_source")} — ${officialSourceTitle} (${t("a11y.external_link")})`}
+            className="inline-flex items-center space-x-1 text-xs font-semibold text-primary hover:text-primary-dark hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded p-1"
           >
             <span>[ {t("claims.view_official_source")} ]</span>
             <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />

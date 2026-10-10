@@ -1,0 +1,63 @@
+{
+  "scheme_code": "PMAY_U_2_0",
+  "policy_version_code": "v1.0-2024",
+  "effective_from": "2024-09-01",
+  "effective_to": null,
+  "source": {
+    "title": "Pradhan Mantri Awas Yojana - Urban 2.0 (PMAY-U 2.0) Scheme Guidelines 2024",
+    "url": "https://pmay-urban.gov.in/guidelines-2.0",
+    "reference": "Ministry of Housing and Urban Affairs, Government of India",
+    "document_identifier": "MOHUA-PMAY-U-2.0-GUIDELINES-2024"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMAYU2-V1-ROOT",
+    "operator": "AND",
+    "description_en": "PMAY-U 2.0 Statutory Housing Assistance Eligibility for Urban Households",
+    "description_hi": "शहरी परिवारों के लिए पीएमएवाई-यू 2.0 वैधानिक आवास सहायता पात्रता",
+    "source_clause": "Guidelines Section 3 & 4",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYU2-URBAN-LOCATION",
+        "operator": "EQ",
+        "field_path": "location.is_urban_area",
+        "expected_value": true,
+        "description_en": "Beneficiary must reside within a statutory town or notified urban local body area",
+        "description_hi": "लाभार्थी को वैधानिक शहर या अधिसूचित शहरी स्थानीय निकाय क्षेत्र में निवास करना चाहिए",
+        "source_clause": "Section 3.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYU2-NO-PUCCA-HOUSE",
+        "operator": "EQ",
+        "field_path": "housing.owns_pucca_house",
+        "expected_value": false,
+        "description_en": "The beneficiary family (husband, wife, unmarried children) must not own a pucca house anywhere in India",
+        "description_hi": "लाभार्थी परिवार (पति, पत्नी, अविवाहित बच्चे) के पास भारत में कहीं भी पक्का मकान नहीं होना चाहिए",
+        "source_clause": "Section 3.2"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYU2-NO-PRIOR-BENEFIT",
+        "operator": "EQ",
+        "field_path": "family.has_prior_housing_benefit",
+        "expected_value": false,
+        "description_en": "Family must not have availed of housing benefits under any Central or State housing scheme in the last 20 years",
+        "description_hi": "परिवार ने पिछले 20 वर्षों में किसी भी केंद्रीय या राज्य आवास योजना के तहत लाभ प्राप्त नहीं किया होना चाहिए",
+        "source_clause": "Section 3.3"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMAYU2-INCOME-CEILING-MIG",
+        "operator": "LTE",
+        "field_path": "family.annual_income",
+        "expected_value": 900000.0,
+        "description_en": "Annual family income must not exceed Rs 9,00,000 (qualifying under EWS, LIG, or MIG categories)",
+        "description_hi": "वार्षिक पारिवारिक आय 9,00,000 रुपये से अधिक नहीं होनी चाहिए (ईडब्ल्यूएस, एलआईजी, या एमआईजी श्रेणी के तहत पात्र)",
+        "source_clause": "Section 4.1"
+      }
+    ]
+  }
+}

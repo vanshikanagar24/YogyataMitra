@@ -102,6 +102,14 @@ async def create_test_journey_with_evidence(
     )
     assert eval_res.status_code == 200, f"Evaluate failed: {eval_res.status_code} - {eval_res.json()}"
 
+    # Assign journey to default test officer for Phase D/E compliance
+    officer_token = await get_auth_token(async_client, "officer@yogyatamitra.local", "Officer@123")
+    await async_client.post(
+        f"/api/v1/officer/cases/{journey_id}/assign",
+        headers={"Authorization": f"Bearer {officer_token}"},
+        json={"officer_identity": "officer@yogyatamitra.local"},
+    )
+
     return {
         "journey_id": journey_id,
         "claim_id": claim_id,
@@ -626,4 +634,3 @@ def test_jwt_tampered_signature_and_payload_rejected():
     tampered_payload_str = "eyJzdWIiOiJhdHRhY2tlckB5b2d5YXRhbWl0cmEubG9jYWwiLCJyb2xlIjoiU1VQRVJWSVNPUiJ9"
     tampered_token = parts[0] + "." + tampered_payload_str + "." + parts[2]
     assert decode_access_token(tampered_token) is None
-

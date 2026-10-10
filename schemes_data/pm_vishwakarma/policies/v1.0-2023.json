@@ -1,0 +1,83 @@
+{
+  "scheme_code": "PM_VISHWAKARMA",
+  "policy_version_code": "v1.0-2023",
+  "effective_from": "2023-09-17",
+  "effective_to": null,
+  "source": {
+    "title": "PM Vishwakarma Scheme Operational Guidelines 2023",
+    "url": "https://pmvishwakarma.gov.in/Home/Guidelines",
+    "reference": "Ministry of Micro, Small and Medium Enterprises, Government of India",
+    "document_identifier": "MSME-PM-VISHWAKARMA-GUIDELINES-2023"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMVISHWAKARMA-V1-ROOT",
+    "operator": "AND",
+    "description_en": "PM Vishwakarma Statutory Artisan Eligibility across 18 Designated Trades",
+    "description_hi": "18 निर्दिष्ट व्यवसायों में पीएम विश्वकर्मा वैधानिक कारीगर पात्रता",
+    "source_clause": "Clause 3.0 & 4.0",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMVISHWAKARMA-MIN-AGE",
+        "operator": "GTE",
+        "field_path": "applicant.age",
+        "expected_value": 18,
+        "description_en": "Artisan must have attained at least 18 years of age on the date of registration",
+        "description_hi": "पंजीकरण की तिथि पर कारीगर की आयु कम से कम 18 वर्ष होनी चाहिए",
+        "source_clause": "Clause 3.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMVISHWAKARMA-ELIGIBLE-TRADE",
+        "operator": "EQ",
+        "field_path": "trade.is_eligible_trade",
+        "expected_value": true,
+        "description_en": "Artisan must be engaged in one of the 18 family-based traditional trades specified under the scheme",
+        "description_hi": "कारीगर योजना के तहत निर्दिष्ट 18 परिवार-आधारित पारंपरिक व्यवसायों में से एक में संलग्न होना चाहिए",
+        "source_clause": "Clause 3.2"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMVISHWAKARMA-SELF-EMPLOYED",
+        "operator": "EQ",
+        "field_path": "trade.is_self_employed",
+        "expected_value": true,
+        "description_en": "Artisan must be self-employed in the unorganized sector working with hands and tools",
+        "description_hi": "कारीगर असंगठित क्षेत्र में हाथों और औजारों से काम करने वाला स्व-नियोजित व्यक्ति होना चाहिए",
+        "source_clause": "Clause 3.2"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMVISHWAKARMA-NO-OUTSTANDING-LOAN",
+        "operator": "EQ",
+        "field_path": "trade.has_outstanding_similar_loan",
+        "expected_value": false,
+        "description_en": "Artisan should not have an outstanding unpaid loan under PMEGP, MUDRA, or PM SVANidhi",
+        "description_hi": "कारीगर के पास पीएमईजीपी, मुद्रा या पीएम स्वनिधि के तहत कोई बकाया गैर-चुकाया ऋण नहीं होना चाहिए",
+        "source_clause": "Clause 3.3"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMVISHWAKARMA-ONE-PER-FAMILY",
+        "operator": "EQ",
+        "field_path": "family.other_member_enrolled",
+        "expected_value": false,
+        "description_en": "Registration and benefits under the scheme are restricted to only one member of a family (husband, wife, and unmarried children)",
+        "description_hi": "योजना के तहत पंजीकरण और लाभ परिवार के केवल एक सदस्य (पति, पत्नी और अविवाहित बच्चे) तक सीमित हैं",
+        "source_clause": "Clause 3.4"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMVISHWAKARMA-EXCL-GOVT-SERVANT",
+        "operator": "EQ",
+        "field_path": "family.has_government_employee",
+        "expected_value": false,
+        "description_en": "A person in government service and their family members shall not be eligible under the scheme",
+        "description_hi": "सरकारी सेवा में कार्यरत व्यक्ति और उनके परिवार के सदस्य योजना के तहत पात्र नहीं होंगे",
+        "source_clause": "Clause 3.5"
+      }
+    ]
+  }
+}

@@ -16,6 +16,7 @@ import { EvaluationResponse } from "../../types/evaluation";
 import { useLanguage } from "../../context/LanguageContext";
 import { getFriendlyFieldTitle, sanitizeCitizenMessage } from "../../utils/claimPresentation";
 import { getFriendlyRuleTitle, getFriendlyRuleExplanation } from "../../utils/rulePresentation";
+import { getOfficialSourceUrl, getOfficialSourceTitle } from "../../utils/officialSources";
 
 interface ExplainabilityViewProps {
   evaluation: EvaluationResponse;
@@ -25,15 +26,16 @@ export const ExplainabilityView: React.FC<ExplainabilityViewProps> = ({ evaluati
   const { isHindi, t } = useLanguage();
 
   const provenance = (evaluation.trace as any)?.provenance;
-  const officialSourceTitle =
-    provenance?.source_title ||
-    (evaluation.scheme_code === "PM_KISAN"
-      ? "Operational Guidelines for Pradhan Mantri Kisan Samman Nidhi (PM-KISAN) 2023"
-      : evaluation.scheme_code === "SSY"
-      ? "Sukanya Samriddhi Account Scheme, 2019 (Ministry of Finance / Gazette of India)"
-      : "Official Statutory Gazette Guidelines");
+  const officialSourceTitle = getOfficialSourceTitle(
+    evaluation.scheme_code,
+    isHindi,
+    provenance?.source_title
+  );
 
-  const officialSourceUrl = provenance?.source_url || null;
+  const officialSourceUrl = getOfficialSourceUrl(
+    evaluation.scheme_code,
+    provenance?.source_url
+  );
 
   return (
     <div
@@ -178,7 +180,8 @@ export const ExplainabilityView: React.FC<ExplainabilityViewProps> = ({ evaluati
                 href={officialSourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center space-x-1 text-xs font-semibold text-gov-secondary hover:text-gov-text"
+                aria-label={`${t("claims.view_official_source")} — ${officialSourceTitle} (${t("a11y.external_link")})`}
+                className="inline-flex items-center space-x-1 text-xs font-semibold text-primary hover:text-primary-dark hover:underline focus-visible:ring-2 focus-visible:ring-primary rounded p-1"
               >
                 <span>[ {t("claims.view_official_source")} ]</span>
                 <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />

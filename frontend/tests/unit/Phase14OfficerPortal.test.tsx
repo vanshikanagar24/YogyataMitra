@@ -21,6 +21,9 @@ jest.mock("next/navigation", () => ({
   }),
   usePathname: () => "/officer",
   useParams: () => ({ journeyId: "test-journey-uuid-12345" }),
+  useSearchParams: () => ({
+    get: () => null,
+  }),
 }));
 
 // Mock officerApi

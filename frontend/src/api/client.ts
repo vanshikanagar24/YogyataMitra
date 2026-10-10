@@ -19,10 +19,11 @@ export async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
-  const headers = {
-    "Content-Type": "application/json",
+  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const headers: Record<string, string> = {
     Accept: "application/json",
-    ...options.headers,
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(options.headers as Record<string, string>),
   };
 
   try {
@@ -79,10 +80,22 @@ export const apiClient = {
       method: "POST",
       body: body ? JSON.stringify(body) : undefined,
     }),
+  upload: <T>(endpoint: string, formData: FormData, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: "POST",
+      body: formData,
+    }),
   patch: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: "PATCH",
+      body: body ? JSON.stringify(body) : undefined,
+    }),
+  put: <T>(endpoint: string, body?: unknown, options?: RequestInit) =>
+    apiRequest<T>(endpoint, {
+      ...options,
+      method: "PUT",
       body: body ? JSON.stringify(body) : undefined,
     }),
 };

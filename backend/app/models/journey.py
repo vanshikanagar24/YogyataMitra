@@ -22,9 +22,12 @@ from app.models.base import Base
 from app.models.enums import JourneyState
 
 if TYPE_CHECKING:
+    from app.models.assignment import OfficerAssignment
     from app.models.citizen import Citizen, Claim
+    from app.models.clarification import ClarificationRequest
     from app.models.evaluation import EvaluationTrace
-    from app.models.scheme import Scheme
+    from app.models.scheme import PolicyVersion, Scheme
+
 
 
 class EvaluationJourney(Base):
@@ -57,6 +60,15 @@ class EvaluationJourney(Base):
         default=JourneyState.DRAFT,
         nullable=False,
     )
+    policy_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("policy_versions.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    submitted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     latest_evaluation_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("evaluation_traces.id", ondelete="SET NULL"),
@@ -76,8 +88,16 @@ class EvaluationJourney(Base):
     # Relationships
     citizen: Mapped["Citizen"] = relationship("Citizen")
     scheme: Mapped["Scheme"] = relationship("Scheme")
+    policy_version: Mapped[Optional["PolicyVersion"]] = relationship("PolicyVersion")
     latest_evaluation: Mapped[Optional["EvaluationTrace"]] = relationship(
         "EvaluationTrace", foreign_keys=[latest_evaluation_id]
+    )
+    evaluation_traces: Mapped[List["EvaluationTrace"]] = relationship(
+        "EvaluationTrace",
+        foreign_keys="EvaluationTrace.journey_id",
+        back_populates="journey",
+        cascade="all, delete-orphan",
+        order_by="EvaluationTrace.created_at.desc()",
     )
     claims: Mapped[List["Claim"]] = relationship(
         "Claim", back_populates="journey", cascade="all, delete-orphan"
@@ -88,8 +108,29 @@ class EvaluationJourney(Base):
         cascade="all, delete-orphan",
         order_by="JourneyTransitionRecord.created_at.asc()",
     )
+    assignments: Mapped[List["OfficerAssignment"]] = relationship(
+        "OfficerAssignment",
+        back_populates="journey",
+        cascade="all, delete-orphan",
+        order_by="OfficerAssignment.created_at.asc()",
+    )
+    clarification_requests: Mapped[List["ClarificationRequest"]] = relationship(
+        "ClarificationRequest",
+        back_populates="journey",
+        cascade="all, delete-orphan",
+        order_by="ClarificationRequest.created_at.asc()",
+    )
+
+    @property
+    def active_assignment(self) -> Optional["OfficerAssignment"]:
+        """Return the currently active officer assignment, if any."""
+        for a in self.assignments:
+            if a.is_active:
+                return a
+        return None
 
     def __repr__(self) -> str:
+
         return f"<EvaluationJourney(id={self.id}, state={self.state.value})>"
 
 

@@ -1,0 +1,183 @@
+{
+  "scheme_code": "PMMVY",
+  "policy_version_code": "v2.0-2022",
+  "effective_from": "2022-04-01",
+  "effective_to": null,
+  "source": {
+    "title": "Mission Shakti — Guidelines for Implementation of Pradhan Mantri Matru Vandana Yojana (PMMVY)",
+    "url": "https://wcd.nic.in/acts/guidelines-pradhan-mantri-matru-vandana-yojana-pmmvy-under-mission-shakti",
+    "reference": "Ministry of Women and Child Development, Government of India",
+    "document_identifier": "MWCD-PMMVY-MISSION-SHAKTI-2022"
+  },
+  "ruleset_version": "1.0.0",
+  "root_rule": {
+    "node_type": "logical",
+    "rule_id": "PMMVY-V2-ROOT",
+    "operator": "AND",
+    "description_en": "PMMVY Mission Shakti Maternity Benefit Statutory Eligibility",
+    "description_hi": "पीएमएमवीवाई मिशन शक्ति मातृत्व लाभ वैधानिक पात्रता",
+    "source_clause": "Guidelines Section 4 & 5",
+    "children": [
+      {
+        "node_type": "comparison",
+        "rule_id": "PMMVY-PREGNANT-OR-LACTATING",
+        "operator": "EQ",
+        "field_path": "applicant.is_pregnant_or_lactating",
+        "expected_value": true,
+        "description_en": "Beneficiary must be a pregnant woman or lactating mother",
+        "description_hi": "लाभार्थी को एक गर्भवती महिला या स्तनपान कराने वाली माता होना चाहिए",
+        "source_clause": "Section 4.1"
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMMVY-MIN-AGE-19",
+        "operator": "GTE",
+        "field_path": "applicant.age",
+        "expected_value": 19,
+        "description_en": "Woman applicant must have attained at least 19 years of age",
+        "description_hi": "महिला आवेदक की आयु कम से कम 19 वर्ष पूर्ण होनी चाहिए",
+        "source_clause": "Section 4.2"
+      },
+      {
+        "node_type": "logical",
+        "rule_id": "PMMVY-PARITY-ELIGIBILITY",
+        "operator": "OR",
+        "description_en": "Maternity incentive is available for the first living child, or for the second child strictly if it is a girl child",
+        "description_hi": "मातृत्व प्रोत्साहन पहले जीवित बच्चे के लिए, या दूसरे बच्चे के लिए केवल तभी उपलब्ध है जब वह एक बालिका हो",
+        "source_clause": "Section 4.3",
+        "children": [
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-FIRST-CHILD",
+            "operator": "EQ",
+            "field_path": "maternity.child_order",
+            "expected_value": 1,
+            "description_en": "Maternity benefit for the first living child",
+            "description_hi": "प्रथम जीवित बच्चे के लिए मातृत्व लाभ",
+            "source_clause": "Section 4.3(a)"
+          },
+          {
+            "node_type": "logical",
+            "rule_id": "PMMVY-SECOND-CHILD-GIRL",
+            "operator": "AND",
+            "description_en": "Benefit for second living child is restricted strictly to a girl child",
+            "description_hi": "दूसरे जीवित बच्चे के लिए लाभ केवल बालिका होने पर ही अनुमन्य है",
+            "source_clause": "Section 4.3(b)",
+            "children": [
+              {
+                "node_type": "comparison",
+                "rule_id": "PMMVY-CHILD-ORDER-TWO",
+                "operator": "EQ",
+                "field_path": "maternity.child_order",
+                "expected_value": 2,
+                "description_en": "Beneficiary applying for second living child",
+                "description_hi": "लाभार्थी दूसरे जीवित बच्चे के लिए आवेदन कर रही है",
+                "source_clause": "Section 4.3(b)"
+              },
+              {
+                "node_type": "comparison",
+                "rule_id": "PMMVY-SECOND-IS-GIRL",
+                "operator": "EQ",
+                "field_path": "maternity.is_girl_child",
+                "expected_value": true,
+                "description_en": "Second child must be female (girl child)",
+                "description_hi": "दूसरा बच्चा बालिका (कन्या) होना चाहिए",
+                "source_clause": "Section 4.3(b)"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "node_type": "comparison",
+        "rule_id": "PMMVY-EXCL-REGULAR-GOVT-PSU",
+        "operator": "EQ",
+        "field_path": "applicant.is_government_or_psu_employee",
+        "expected_value": false,
+        "description_en": "Women in regular employment with Central/State Government or PSUs are not eligible",
+        "description_hi": "केंद्र/राज्य सरकार या सार्वजनिक उपक्रमों में नियमित रोजगार में कार्यरत महिलाएं पात्र नहीं हैं",
+        "source_clause": "Section 4.4"
+      },
+      {
+        "node_type": "logical",
+        "rule_id": "PMMVY-QUALIFYING-CATEGORY",
+        "operator": "OR",
+        "description_en": "Beneficiary must belong to socially or economically disadvantaged category (SC/ST, BPL/NFSA, e-Shram, PMJAY, MGNREGA, PM-KISAN, or income under Rs 8 Lakh)",
+        "description_hi": "लाभार्थी सामाजिक या आर्थिक रूप से वंचित श्रेणी (एससी/एसटी, बीपीएल/एनएफएसए, ई-श्रम, पीएमजेएवाई, मनरेगा, पीएम-किसान, या 8 लाख रुपये से कम आय) से संबंधित होनी चाहिए",
+        "source_clause": "Section 5.1",
+        "children": [
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-SC-ST",
+            "operator": "EQ",
+            "field_path": "applicant.is_sc_st",
+            "expected_value": true,
+            "description_en": "Women belonging to Scheduled Castes or Scheduled Tribes",
+            "description_hi": "अनुसूचित जाति या अनुसूचित जनजाति से संबंधित महिलाएं",
+            "source_clause": "Section 5.1(a)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-BPL-NFSA",
+            "operator": "EQ",
+            "field_path": "family.has_bpl_or_nfsa_ration_card",
+            "expected_value": true,
+            "description_en": "Women holding a BPL or NFSA ration card",
+            "description_hi": "बीपीएल या एनएफएसए राशन कार्ड धारक महिलाएं",
+            "source_clause": "Section 5.1(b)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-ESHRAM",
+            "operator": "EQ",
+            "field_path": "applicant.has_eshram_card",
+            "expected_value": true,
+            "description_en": "Women holding active e-Shram registration card",
+            "description_hi": "सक्रिय ई-श्रम पंजीकरण कार्ड धारक महिलाएं",
+            "source_clause": "Section 5.1(c)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-PMJAY",
+            "operator": "EQ",
+            "field_path": "family.is_pmjay_beneficiary",
+            "expected_value": true,
+            "description_en": "Beneficiary under Pradhan Mantri Jan Aarogya Yojana (PM-JAY)",
+            "description_hi": "प्रधानमंत्री जन आरोग्य योजना (पीएम-जेएवाई) के तहत लाभार्थी",
+            "source_clause": "Section 5.1(d)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-MGNREGA",
+            "operator": "EQ",
+            "field_path": "family.has_mgnrega_card",
+            "expected_value": true,
+            "description_en": "Women holding MGNREGA Job Card",
+            "description_hi": "मनरेगा जॉब कार्ड धारक महिलाएं",
+            "source_clause": "Section 5.1(e)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-PMKISAN",
+            "operator": "EQ",
+            "field_path": "family.is_pmkisan_beneficiary",
+            "expected_value": true,
+            "description_en": "Farmer family beneficiary under PM-KISAN",
+            "description_hi": "पीएम-किसान के तहत किसान परिवार लाभार्थी",
+            "source_clause": "Section 5.1(f)"
+          },
+          {
+            "node_type": "comparison",
+            "rule_id": "PMMVY-CAT-INCOME-CEILING",
+            "operator": "LT",
+            "field_path": "family.annual_income",
+            "expected_value": 800000.0,
+            "description_en": "Women with total annual family income strictly less than Rs 8 Lakh",
+            "description_hi": "8 लाख रुपये से कम कुल वार्षिक पारिवारिक आय वाली महिलाएं",
+            "source_clause": "Section 5.1(g)"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -75,6 +75,23 @@ def _build_demo_users() -> Dict[str, Dict[str, Any]]:
             "designation": "Verification Officer Grade II",
             "department": "Welfare Verification Cell",
         },
+        "officer.varanasi@yogyatamitra.local": {
+            "email": "officer.varanasi@yogyatamitra.local",
+            "password_hash": hash_password("Officer@123"),
+            "name": "Varanasi Verification Officer (Demo)",
+            "role": "OFFICER",
+            "designation": "Verification Officer Grade I",
+            "department": "District Verification Cell, Varanasi",
+        },
+        "officer.lucknow@yogyatamitra.local": {
+            "email": "officer.lucknow@yogyatamitra.local",
+            "password_hash": hash_password("Officer@123"),
+            "name": "Lucknow Verification Officer (Demo)",
+            "role": "OFFICER",
+            "designation": "Verification Officer Grade I",
+            "department": "District Verification Cell, Lucknow",
+        },
+
         "supervisor@yogyatamitra.local": {
             "email": "supervisor@yogyatamitra.local",
             "password_hash": hash_password("Supervisor@123"),
@@ -86,10 +103,13 @@ def _build_demo_users() -> Dict[str, Dict[str, Any]]:
         "citizen.test@yogyatamitra.local": {
             "email": "citizen.test@yogyatamitra.local",
             "password_hash": hash_password("Citizen@123"),
-            "name": "Test Citizen (Non-Officer)",
+            "name": "Test Citizen (Demo)",
             "role": "CITIZEN",
+            "citizen_ref": "SYN-CIT-DEMO0001",
             "designation": "Citizen Applicant",
             "department": "Public",
+            "state": "Maharashtra",
+            "district": "Pune",
         },
     }
 
@@ -232,4 +252,83 @@ def authenticate_user(email: str, password: str) -> Optional[Dict[str, Any]]:
         "role": user["role"],
         "designation": user["designation"],
         "department": user["department"],
+    }
+
+
+REGISTERED_CITIZENS: Dict[str, Dict[str, Any]] = {}
+
+
+def register_citizen_user(
+    email: str,
+    password: str,
+    name: str,
+    state: Optional[str] = None,
+    district: Optional[str] = None,
+    citizen_ref: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Register a new citizen with a synthetic reference and salted PBKDF2 hash."""
+    clean_email = email.lower().strip()
+    if clean_email in DEMO_USERS or clean_email in REGISTERED_CITIZENS:
+        raise ValueError("An account with this email address is already registered.")
+
+    ref = citizen_ref or f"SYN-CIT-{secrets.token_hex(4).upper()}"
+    user_record = {
+        "email": clean_email,
+        "password_hash": hash_password(password),
+        "name": name.strip(),
+        "role": "CITIZEN",
+        "citizen_ref": ref,
+        "designation": "Citizen Beneficiary",
+        "department": "Public",
+        "state": state.strip() if state else None,
+        "district": district.strip() if district else None,
+    }
+    REGISTERED_CITIZENS[clean_email] = user_record
+    return user_record
+
+
+def authenticate_citizen(identifier: str, password: str) -> Optional[Dict[str, Any]]:
+    """Authenticate citizen by email or synthetic reference."""
+    clean_id = identifier.strip()
+    clean_id_lower = clean_id.lower()
+    clean_id_upper = clean_id.upper()
+
+    user: Optional[Dict[str, Any]] = None
+
+    # Check registered citizens by email
+    if clean_id_lower in REGISTERED_CITIZENS:
+        user = REGISTERED_CITIZENS[clean_id_lower]
+    elif not user:
+        for u in REGISTERED_CITIZENS.values():
+            if u.get("citizen_ref") == clean_id_upper:
+                user = u
+                break
+
+    # Check demo users store
+    if not user:
+        if clean_id_lower in DEMO_USERS:
+            candidate = DEMO_USERS[clean_id_lower]
+            if candidate.get("role") == "CITIZEN":
+                user = candidate
+        if not user:
+            for candidate in DEMO_USERS.values():
+                if candidate.get("role") == "CITIZEN" and candidate.get("citizen_ref") == clean_id_upper:
+                    user = candidate
+                    break
+
+    if not user:
+        return None
+
+    if not verify_password(password, user["password_hash"]):
+        return None
+
+    return {
+        "email": user["email"],
+        "name": user["name"],
+        "role": user["role"],
+        "citizen_ref": user.get("citizen_ref", f"SYN-CIT-{secrets.token_hex(4).upper()}"),
+        "state": user.get("state"),
+        "district": user.get("district"),
+        "designation": user.get("designation", "Citizen Beneficiary"),
+        "department": user.get("department", "Public"),
     }

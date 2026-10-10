@@ -17,13 +17,17 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.models.assignment import OfficerAssignment
 from app.models.citizen import Citizen, Claim, Evidence, VerificationRecord
+from app.models.clarification import ClarificationRequest
 from app.models.enums import (
+    AssignmentStatus,
     ClaimStatus,
     EligibilityResult,
     EvidenceStatus,
     HumanReviewStatus,
     JourneyState,
+    SLAStatus,
     VerificationStatus,
 )
 from app.models.evaluation import EvaluationTrace
@@ -33,6 +37,7 @@ from app.models.scheme import PolicyVersion, RuleSet, Scheme
 from app.schemas.officer import (
     OfficerAssessmentResponse,
     OfficerAssessmentRuleResponse,
+    OfficerAssignmentResponse,
     OfficerAuditEventResponse,
     OfficerCaseDetailResponse,
     OfficerCaseReviewRequest,
@@ -44,6 +49,8 @@ from app.schemas.officer import (
     OfficerQueueListResponse,
     OfficerQueueMetricsResponse,
 )
+from app.services.assignment_service import compute_sla_status
+
 
 # ------------------------------------------------------------------------------
 # Plain-Language Formatting Dictionaries & Helpers
@@ -128,8 +135,12 @@ async def get_officer_queue(
     session: AsyncSession,
     status_filter: Optional[str] = None,
     scheme_filter: Optional[str] = None,
+    sla_filter: Optional[str] = None,
+    assigned_to_me: Optional[bool] = None,
+    unassigned_only: Optional[bool] = None,
+    current_officer_identity: Optional[str] = None,
 ) -> OfficerQueueListResponse:
-    """Query the verification queue and compute aggregate operational metrics."""
+    """Query the verification queue and compute aggregate operational metrics including assignment & SLA."""
     # Query all evaluation journeys with related entities
     stmt = (
         select(EvaluationJourney)
@@ -144,14 +155,23 @@ async def get_officer_queue(
     result = await session.execute(stmt)
     journeys = result.scalars().all()
 
-    # Load all human reviews for quick lookup
+    # Load all human reviews and active assignments for quick lookup
     journey_ids = [j.id for j in journeys]
     reviews_map: Dict[uuid.UUID, HumanReview] = {}
+    assignments_map: Dict[uuid.UUID, OfficerAssignment] = {}
     if journey_ids:
         r_stmt = select(HumanReview).where(HumanReview.journey_id.in_(journey_ids))
         r_res = await session.execute(r_stmt)
         for r in r_res.scalars().all():
             reviews_map[r.journey_id] = r
+
+        a_stmt = select(OfficerAssignment).where(
+            OfficerAssignment.journey_id.in_(journey_ids),
+            OfficerAssignment.is_active == True,
+        )
+        a_res = await session.execute(a_stmt)
+        for a in a_res.scalars().all():
+            assignments_map[a.journey_id] = a
 
     # Compute metrics across all journeys
     total_cases = len(journeys)
@@ -160,6 +180,7 @@ async def get_officer_queue(
     escalated_cases = 0
     completed_cases = 0
 
+    now = datetime.now(timezone.utc)
     queue_items: List[OfficerQueueItemResponse] = []
 
     for j in journeys:
@@ -176,13 +197,38 @@ async def get_officer_queue(
         elif rev_status in (HumanReviewStatus.COMPLETED.value, HumanReviewStatus.VERIFIED.value):
             completed_cases += 1
 
-        # Check filters
+        assign = assignments_map.get(j.id)
+        assign_officer = assign.officer_identity if assign else None
+        assign_officer_name = assign.officer_name if assign else None
+        assign_status = assign.status.value if assign else "UNASSIGNED"
+        assign_at = assign.assigned_at if assign else None
+        due_at = assign.due_at if assign else None
+
+        sla_st = compute_sla_status(assign.due_at, assign.status, now) if assign else SLAStatus.NOT_DUE
+
+        # Filter by review status
         if status_filter and status_filter.upper() != "ALL":
             if rev_status.upper() != status_filter.upper():
                 continue
 
+        # Filter by scheme
         if scheme_filter and scheme_filter.upper() != "ALL":
             if j.scheme.scheme_code.upper() != scheme_filter.upper():
+                continue
+
+        # Filter by SLA status
+        if sla_filter and sla_filter.upper() != "ALL":
+            if sla_st.value != sla_filter.upper():
+                continue
+
+        # Filter: assigned to me
+        if assigned_to_me:
+            if not assign or assign.officer_identity.lower() != (current_officer_identity or "").lower():
+                continue
+
+        # Filter: unassigned only
+        if unassigned_only:
+            if assign is not None:
                 continue
 
         # Count evidence items
@@ -208,12 +254,18 @@ async def get_officer_queue(
                 scheme_code=j.scheme.scheme_code,
                 scheme_name=j.scheme.name_en,
                 journey_state=j.state.value,
-                submitted_at=j.created_at,
+                submitted_at=j.submitted_at or j.created_at,
                 review_status=rev_status,
                 review_decision=rev_decision,
                 evidence_count=evidence_count,
                 verified_evidence_count=verified_evidence_count,
                 automated_eligibility=auto_eligibility,
+                assigned_officer=assign_officer,
+                assigned_officer_name=assign_officer_name,
+                assignment_status=assign_status,
+                assigned_at=assign_at,
+                due_at=due_at,
+                sla_status=sla_st.value,
             )
         )
 
@@ -228,6 +280,7 @@ async def get_officer_queue(
     return OfficerQueueListResponse(metrics=metrics, items=queue_items)
 
 
+
 async def get_case_detail(
     session: AsyncSession, journey_id: uuid.UUID
 ) -> OfficerCaseDetailResponse:
@@ -239,6 +292,7 @@ async def get_case_detail(
             selectinload(EvaluationJourney.citizen),
             selectinload(EvaluationJourney.claims).selectinload(Claim.evidence_items).selectinload(Evidence.verification_records),
             selectinload(EvaluationJourney.latest_evaluation).selectinload(EvaluationTrace.policy_version),
+            selectinload(EvaluationJourney.clarification_requests).selectinload(ClarificationRequest.replacement_evidence),
         )
         .where(EvaluationJourney.id == journey_id)
     )
@@ -325,6 +379,9 @@ async def get_case_detail(
                     description=r.get("description", ""),
                     result=r.get("result", "UNKNOWN"),
                     details=r.get("details") or r.get("reason"),
+                    operator=r.get("operator"),
+                    expected_value=str(r.get("expected_value")) if r.get("expected_value") is not None else None,
+                    actual_value=str(r.get("actual_value")) if r.get("actual_value") is not None else None,
                 )
             )
 
@@ -350,6 +407,8 @@ async def get_case_detail(
             rules_evaluated=rules_evaluated,
             missing_facts=missing_facts,
             disqualifiers=disqualifiers,
+            reasons_en=trace_json.get("reasons_en", []),
+            reasons_hi=trace_json.get("reasons_hi", []),
         )
 
     # Policy provenance
@@ -361,6 +420,36 @@ async def get_case_detail(
         ruleset = rs_res.scalars().first()
         rule_count = len(ruleset.definition_json.get("rules", [])) if ruleset else 0
 
+        # Check for bound official document version
+        from app.models.provenance import OfficialDocument, OfficialDocumentVersion, PolicySourceBinding
+        bind_stmt = (
+            select(PolicySourceBinding)
+            .options(
+                selectinload(PolicySourceBinding.document_version)
+                .selectinload(OfficialDocumentVersion.document)
+            )
+            .where(PolicySourceBinding.policy_version_id == pv.id)
+        )
+        bind_res = await session.execute(bind_stmt)
+        binding = bind_res.scalars().first()
+
+        doc_title = None
+        doc_ver = None
+        doc_hash = None
+        source_url = pv.source_url
+        issuing_auth = "Government of India / Nodal Ministry"
+        comp = "COMPLETE"
+
+        if binding and binding.document_version:
+            dv = binding.document_version
+            doc = dv.document
+            doc_title = doc.document_title
+            doc_ver = dv.version_label
+            doc_hash = dv.document_hash
+            source_url = dv.official_url
+            issuing_auth = doc.issuing_authority
+            comp = dv.provenance_completeness.value
+
         policy_prov = OfficerPolicyProvenanceResponse(
             scheme_code=journey.scheme.scheme_code,
             scheme_name=journey.scheme.name_en,
@@ -371,9 +460,14 @@ async def get_case_detail(
             content_sha256=pv.rule_definition_hash or "N/A",
             official_citation=pv.source_title,
             gazette_reference=pv.source_document_identifier or "Official Gazette of India",
-            issuing_authority="Government of India / Nodal Ministry",
+            issuing_authority=issuing_auth,
             rule_definitions_count=rule_count,
             is_statutory_source_verified=True,
+            document_title=doc_title,
+            document_version=doc_ver,
+            document_hash=doc_hash,
+            official_source_url=source_url,
+            provenance_completeness=comp,
         )
 
     # Audit events
@@ -394,6 +488,70 @@ async def get_case_detail(
         for a in audit_records
     ]
 
+    # Assignments and SLA history
+    assign_stmt = (
+        select(OfficerAssignment)
+        .where(OfficerAssignment.journey_id == journey.id)
+        .order_by(desc(OfficerAssignment.created_at))
+    )
+    assign_res = await session.execute(assign_stmt)
+    db_assignments = list(assign_res.scalars().all())
+
+    now = datetime.now(timezone.utc)
+    active_assign_model: Optional[OfficerAssignmentResponse] = None
+    assignment_history: List[OfficerAssignmentResponse] = []
+
+    for a in db_assignments:
+        sla_st = compute_sla_status(a.due_at, a.status, now)
+        a_model = OfficerAssignmentResponse(
+            id=a.id,
+            journey_id=a.journey_id,
+            officer_identity=a.officer_identity,
+            officer_name=a.officer_name,
+            assigned_by=a.assigned_by,
+            assigned_at=a.assigned_at,
+            due_at=a.due_at,
+            sla_duration_hours=a.sla_duration_hours,
+            status=a.status.value,
+            is_active=a.is_active,
+            reassigned_to_id=a.reassigned_to_id,
+            reassignment_reason=a.reassignment_reason,
+            sla_status=sla_st.value,
+            created_at=a.created_at,
+            updated_at=a.updated_at,
+        )
+        assignment_history.append(a_model)
+        if a.is_active and not active_assign_model:
+            active_assign_model = a_model
+
+    from app.services.verification_service import compute_verification_status
+    v_metrics = await compute_verification_status(session, journey.id)
+    v_status = v_metrics["verification_status"]
+
+    clarifications_list = [
+        {
+            "id": str(cr.id),
+            "journey_id": str(cr.journey_id),
+            "evidence_id": str(cr.evidence_id) if cr.evidence_id else None,
+            "claim_id": str(cr.claim_id) if cr.claim_id else None,
+            "round": cr.round,
+            "requesting_officer": cr.requesting_officer,
+            "requesting_officer_role": cr.requesting_officer_role,
+            "request_reason": cr.request_reason,
+            "notes": cr.notes,
+            "status": cr.status.value,
+            "requested_at": cr.requested_at.isoformat() if cr.requested_at else None,
+            "response_text": cr.response_text,
+            "responded_at": cr.responded_at.isoformat() if cr.responded_at else None,
+            "replacement_evidence_id": str(cr.replacement_evidence_id) if cr.replacement_evidence_id else None,
+            "resolution_notes": cr.resolution_notes,
+            "resolved_at": cr.resolved_at.isoformat() if cr.resolved_at else None,
+            "resolved_by": cr.resolved_by,
+            "created_at": cr.created_at.isoformat() if cr.created_at else None,
+        }
+        for cr in (journey.clarification_requests or [])
+    ]
+
     citizen_ref = getattr(journey.citizen, "synthetic_id", None) or f"SYN-CIT-{str(journey.citizen_id)[:8].upper()}"
 
     return OfficerCaseDetailResponse(
@@ -402,7 +560,7 @@ async def get_case_detail(
         scheme_code=journey.scheme.scheme_code,
         scheme_name=journey.scheme.name_en,
         journey_state=journey.state.value,
-        submitted_at=journey.created_at,
+        submitted_at=journey.submitted_at or journey.created_at,
         updated_at=journey.updated_at,
         review_status=review.status.value,
         review_decision=review.decision,
@@ -414,7 +572,12 @@ async def get_case_detail(
         automated_assessment=assessment_response,
         policy_provenance=policy_prov,
         audit_history=audit_history,
+        active_assignment=active_assign_model,
+        assignment_history=assignment_history,
+        clarifications=clarifications_list,
+        verification_status=v_status,
     )
+
 
 
 async def verify_evidence_item(

@@ -4,4 +4,6 @@ export * from "./policies";
 export * from "./evaluations";
 export * from "./journeys";
 export * from "./officer";
+export * from "./citizen";
 export * from "./policyAuthoring";
+export * from "./provenance";

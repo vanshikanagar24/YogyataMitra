@@ -783,11 +783,14 @@ def test_u_canonical_policy_hashes_unchanged():
 
 
 def test_v_exactly_two_schemes_invariant():
-    """Test V: Declarative scheme manifests on disk are strictly confined to PM_KISAN and SSY."""
+    """Test V: Declarative scheme manifests on disk contain all 10 statutory schemes."""
     schemes_data_dir = get_default_schemes_data_dir()
     discovered = discover_schemes_and_policies(schemes_data_dir)
-    assert set(discovered.keys()) == {"PM_KISAN", "SSY"}
-    assert len(discovered) == 2
+    assert len(discovered) == 10
+    assert set(discovered.keys()) == {
+        "PM_KISAN", "SSY", "PM_KMY", "PMUY", "PM_VISHWAKARMA",
+        "PMAY_G", "PMAY_U_2_0", "PM_SVANIDHI", "PMMVY", "IGNOAPS"
+    }
 
 
 @pytest.mark.asyncio
@@ -825,7 +828,7 @@ async def test_w_candidate_approval_does_not_mutate_statutory_policies(async_cli
         pv_count_after = len((await session.execute(select(PolicyVersion))).scalars().all())
 
     # Statutory PolicyVersions must remain completely unchanged
-    assert pv_count_before == pv_count_after == 6
+    assert pv_count_before == pv_count_after == 14
 
 
 # ==============================================================================
@@ -1153,10 +1156,10 @@ async def test_adversarial_prompt_injection_preserved_verbatim_and_flagged(async
     # 3. State machine is NOT influenced: must remain strictly in PENDING_REVIEW
     assert adversarial_cand.review_status == CandidateReviewStatus.PENDING_REVIEW
 
-    # 4. Zero executable action: Statutory policies in database remain untouched (exactly 6)
+    # 4. Zero executable action: Statutory policies in database remain untouched (all 14)
     async with AsyncSessionLocal() as session:
         pv_count = len((await session.execute(select(PolicyVersion))).scalars().all())
-    assert pv_count == 6
+    assert pv_count == 14
 
 
 # ==============================================================================
@@ -1220,4 +1223,3 @@ async def test_candidate_taxonomy_all_10_types_supported(async_client: AsyncClie
         assert resp.status_code == 200
         data = resp.json()
         assert any(c["candidate_type"] == c_type.value for c in data["candidates"])
-

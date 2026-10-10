@@ -136,15 +136,87 @@ const CLAIM_METADATA_MAP: Record<string, ClaimMetadata> = {
     questionEn: "Was the land acquired strictly via legal succession or inheritance?",
     questionHi: "क्या भूमि का स्वामित्व कानूनी उत्तराधिकार या विरासत द्वारा प्राप्त हुआ था?",
   },
+  family: {
+    titleEn: "Family Details",
+    titleHi: "पारिवारिक विवरण",
+    questionEn: "Family Details",
+    questionHi: "पारिवारिक विवरण",
+  },
+  guardian: {
+    titleEn: "Guardian Details",
+    titleHi: "अभिभावक विवरण",
+    questionEn: "Guardian Information",
+    questionHi: "अभिभावक विवरण",
+  },
+  beneficiary: {
+    titleEn: "Beneficiary Details",
+    titleHi: "लाभार्थी विवरण",
+    questionEn: "Beneficiary Information",
+    questionHi: "बालिका / लाभार्थी विवरण",
+  },
+  account: {
+    titleEn: "Bank / Post Office Account Details",
+    titleHi: "बैंक / डाकघर खाता विवरण",
+    questionEn: "Account Information",
+    questionHi: "खाता संबंधी विवरण",
+  },
+  land: {
+    titleEn: "Land Ownership Details",
+    titleHi: "भूमि स्वामित्व विवरण",
+    questionEn: "Land Details",
+    questionHi: "भूमि विवरण",
+  },
+  applicant: {
+    titleEn: "Applicant Details",
+    titleHi: "आवेदक विवरण",
+    questionEn: "Applicant Information",
+    questionHi: "आवेदक विवरण",
+  },
+  "guardian.is_natural_guardian": {
+    titleEn: "Natural Guardian",
+    titleHi: "प्राकृतिक अभिभावक",
+    questionEn: "Is the account being opened by the natural guardian?",
+    questionHi: "क्या खाता प्राकृतिक अभिभावक द्वारा खोला जा रहा है?",
+  },
+  "guardian.is_court_appointed_legal_guardian": {
+    titleEn: "Court Appointed Legal Guardian",
+    titleHi: "न्यायालय द्वारा नियुक्त कानूनी अभिभावक",
+    questionEn: "Is the guardian appointed by a court of law?",
+    questionHi: "क्या अभिभावक न्यायालय द्वारा नियुक्त है?",
+  },
+  "family.has_multiple_birth_exception": {
+    titleEn: "Multiple Birth Exception (Twins / Triplets)",
+    titleHi: "बहु-जन्म अपवाद (जुड़वां / तिड़वां)",
+    questionEn: "Does the family have a multiple birth exception?",
+    questionHi: "क्या परिवार में जुड़वां/तिड़वां बालिका अपवाद लागू है?",
+  },
 };
 
 /**
  * Format a raw value JSON into citizen-friendly text.
+ * Strictly prevents "[object Object]" leaks under any circumstance.
  */
-export function formatCitizenValue(val: any, fieldKey: string, isHindi: boolean): { text: string; isPositive: boolean } {
+export function formatCitizenValue(
+  val: any,
+  fieldKey: string = "",
+  isHindi: boolean = false
+): { text: string; isPositive: boolean } {
+  if (val === null || val === undefined || val === "") {
+    return {
+      text: isHindi ? "जानकारी उपलब्ध नहीं है" : "Not provided",
+      isPositive: false,
+    };
+  }
+
   let raw = val;
-  if (raw !== null && typeof raw === "object" && "value" in raw) {
+  if (typeof raw === "object" && raw !== null && "value" in raw) {
     raw = raw.value;
+    if (raw === null || raw === undefined || raw === "") {
+      return {
+        text: isHindi ? "जानकारी उपलब्ध नहीं है" : "Not provided",
+        isPositive: false,
+      };
+    }
   }
 
   if (typeof raw === "boolean") {
@@ -155,13 +227,14 @@ export function formatCitizenValue(val: any, fieldKey: string, isHindi: boolean)
   }
 
   if (typeof raw === "number") {
-    if (fieldKey.includes("area") || fieldKey.includes("hectare")) {
+    const keyLower = (fieldKey || "").toLowerCase();
+    if (keyLower.includes("area") || keyLower.includes("hectare")) {
       return {
         text: isHindi ? `${raw} हेक्टेयर` : `${raw} Hectares`,
         isPositive: raw > 0,
       };
     }
-    if (fieldKey.includes("accounts_count")) {
+    if (keyLower.includes("accounts_count") || keyLower.includes("active_ssy")) {
       return {
         text: isHindi ? `${raw} खाता/खाते` : `${raw} Account(s)`,
         isPositive: raw === 0,
@@ -194,6 +267,40 @@ export function formatCitizenValue(val: any, fieldKey: string, isHindi: boolean)
       }
     }
     return { text: raw, isPositive: true };
+  }
+
+  // Handle Arrays
+  if (Array.isArray(raw)) {
+    if (raw.length === 0) {
+      return { text: isHindi ? "कोई नहीं" : "None", isPositive: true };
+    }
+    const formattedItems = raw.map((item) => formatCitizenValue(item, fieldKey, isHindi).text);
+    return { text: formattedItems.join(", "), isPositive: true };
+  }
+
+  // Handle Objects (Family, Beneficiary, Guardian, Account, Land, etc.)
+  if (typeof raw === "object" && raw !== null) {
+    const entries = Object.entries(raw).filter(
+      ([k, v]) => v !== null && v !== undefined && k !== "_sa_instance_state"
+    );
+    if (entries.length === 0) {
+      return {
+        text: isHindi ? "जानकारी उपलब्ध नहीं है" : "Not provided",
+        isPositive: false,
+      };
+    }
+
+    const formattedParts = entries.map(([subKey, subVal]) => {
+      const fullSubKey = fieldKey ? `${fieldKey}.${subKey}` : subKey;
+      const title = getFriendlyFieldTitle(fullSubKey, isHindi);
+      const formattedVal = formatCitizenValue(subVal, fullSubKey, isHindi);
+      return `${title}: ${formattedVal.text}`;
+    });
+
+    return {
+      text: formattedParts.join(isHindi ? " | " : " | "),
+      isPositive: true,
+    };
   }
 
   return { text: String(raw ?? ""), isPositive: true };
@@ -313,11 +420,23 @@ export function getEvidencePresentation(
  * Returns citizen-friendly title for a field path in explainability views.
  */
 export function getFriendlyFieldTitle(fieldPath: string, isHindi: boolean): string {
+  if (!fieldPath) return "";
   const meta = CLAIM_METADATA_MAP[fieldPath];
   if (meta) {
     return isHindi ? meta.titleHi : meta.titleEn;
   }
-  const clean = fieldPath.split(".").pop()?.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+  const lastPart = fieldPath.split(".").pop() || fieldPath;
+  const directMatch =
+    CLAIM_METADATA_MAP[`family.${lastPart}`] ||
+    CLAIM_METADATA_MAP[`beneficiary.${lastPart}`] ||
+    CLAIM_METADATA_MAP[`guardian.${lastPart}`] ||
+    CLAIM_METADATA_MAP[`land.${lastPart}`] ||
+    CLAIM_METADATA_MAP[`account.${lastPart}`] ||
+    CLAIM_METADATA_MAP[lastPart];
+  if (directMatch) {
+    return isHindi ? directMatch.titleHi : directMatch.titleEn;
+  }
+  const clean = lastPart.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
   return clean || fieldPath;
 }
 

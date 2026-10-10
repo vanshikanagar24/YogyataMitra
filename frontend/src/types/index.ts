@@ -6,3 +6,4 @@ export * from "./journey";
 export * from "./api";
 export * from "./audit";
 export * from "./officer";
+export * from "./auth";

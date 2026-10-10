@@ -47,6 +47,27 @@ class OfficerLoginResponse(BaseModel):
 # Verification Queue Schemas
 # ==============================================================================
 
+class OfficerAssignmentResponse(BaseModel):
+    """Detailed representation of an operational officer assignment."""
+    id: uuid.UUID
+    journey_id: uuid.UUID
+    officer_identity: str
+    officer_name: Optional[str] = None
+    assigned_by: str
+    assigned_at: datetime
+    due_at: datetime
+    sla_duration_hours: int
+    status: str
+    is_active: bool
+    reassigned_to_id: Optional[uuid.UUID] = None
+    reassignment_reason: Optional[str] = None
+    sla_status: str = "NOT_DUE"  # NOT_DUE, DUE_SOON, OVERDUE, COMPLETED
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class OfficerQueueItemResponse(BaseModel):
     """Summary item in the officer verification queue."""
     journey_id: uuid.UUID
@@ -60,6 +81,12 @@ class OfficerQueueItemResponse(BaseModel):
     evidence_count: int = 0
     verified_evidence_count: int = 0
     automated_eligibility: Optional[str] = None
+    assigned_officer: Optional[str] = None
+    assigned_officer_name: Optional[str] = None
+    assignment_status: str = "UNASSIGNED"
+    assigned_at: Optional[datetime] = None
+    due_at: Optional[datetime] = None
+    sla_status: str = "NOT_DUE"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -73,10 +100,23 @@ class OfficerQueueMetricsResponse(BaseModel):
     completed_cases: int
 
 
+class OfficerDashboardStatsResponse(BaseModel):
+    """Operational dashboard statistics backed by real database records."""
+    my_active_requests: int
+    unassigned_requests: int
+    due_soon: int
+    overdue: int
+    completed: int
+    total_active_workload: int
+    max_capacity_per_officer: int
+    default_sla_duration_hours: int
+
+
 class OfficerQueueListResponse(BaseModel):
     """Complete response payload for officer queue list."""
     metrics: OfficerQueueMetricsResponse
     items: List[OfficerQueueItemResponse]
+
 
 
 # ==============================================================================
@@ -127,6 +167,9 @@ class OfficerAssessmentRuleResponse(BaseModel):
     description: str
     result: str  # PASS, FAIL, UNKNOWN
     details: Optional[str] = None
+    operator: Optional[str] = None
+    expected_value: Optional[str] = None
+    actual_value: Optional[str] = None
 
 
 class OfficerAssessmentResponse(BaseModel):
@@ -139,6 +182,8 @@ class OfficerAssessmentResponse(BaseModel):
     rules_evaluated: List[OfficerAssessmentRuleResponse] = []
     missing_facts: List[str] = []
     disqualifiers: List[str] = []
+    reasons_en: List[str] = []
+    reasons_hi: List[str] = []
 
 
 class OfficerPolicyProvenanceResponse(BaseModel):
@@ -155,6 +200,11 @@ class OfficerPolicyProvenanceResponse(BaseModel):
     issuing_authority: str
     rule_definitions_count: int
     is_statutory_source_verified: bool = True
+    document_title: Optional[str] = None
+    document_version: Optional[str] = None
+    document_hash: Optional[str] = None
+    official_source_url: Optional[str] = None
+    provenance_completeness: Optional[str] = "COMPLETE"
 
 
 # ==============================================================================
@@ -201,11 +251,33 @@ class OfficerCaseDetailResponse(BaseModel):
     automated_assessment: Optional[OfficerAssessmentResponse] = None
     policy_provenance: Optional[OfficerPolicyProvenanceResponse] = None
     audit_history: List[OfficerAuditEventResponse] = []
+    active_assignment: Optional[OfficerAssignmentResponse] = None
+    assignment_history: List[OfficerAssignmentResponse] = []
+    clarifications: List[Dict[str, Any]] = []
+    verification_status: Optional[str] = None
 
 
 # ==============================================================================
 # Action Requests
 # ==============================================================================
+
+class OfficerAssignmentRequest(BaseModel):
+    """Payload to manually assign a case to an officer."""
+    officer_identity: str = Field(..., description="Target officer email / identifier")
+    sla_hours: Optional[int] = Field(None, ge=1, le=720, description="Optional custom SLA duration in hours")
+    reason: Optional[str] = Field(None, description="Optional administrative justification")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class OfficerReassignmentRequest(BaseModel):
+    """Payload to reassign an active case to a new officer with auditable justification."""
+    new_officer_identity: str = Field(..., description="Target new officer email / identifier")
+    reason: str = Field(..., min_length=3, description="Mandatory justification for reassignment")
+    sla_hours: Optional[int] = Field(None, ge=1, le=720, description="Optional custom SLA duration in hours")
+
+    model_config = ConfigDict(extra="forbid")
+
 
 class OfficerEvidenceVerifyRequest(BaseModel):
     """Payload to record an officer determination on an individual evidence item."""
@@ -233,5 +305,12 @@ class OfficerCaseReviewRequest(BaseModel):
         description="Mandatory reason for CLARIFICATION_REQUIRED, REJECTED, ESCALATED, or supervisor resolution",
     )
     notes: Optional[str] = Field(None, description="Optional case notes")
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class OfficerCaseEvaluationExecuteRequest(BaseModel):
+    """Payload to execute deterministic statutory evaluation on an assigned case."""
+    notes: Optional[str] = Field(None, description="Optional officer notes or evaluation justification")
 
     model_config = ConfigDict(extra="forbid")

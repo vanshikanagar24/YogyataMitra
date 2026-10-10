@@ -55,9 +55,12 @@ export const SchemeCard: React.FC<SchemeCardProps> = ({ scheme }) => {
           {description}
         </p>
 
-        {/* Highlight Benefit */}
+        {/* Highlight Benefit (Descriptive Presentation Only) */}
         {benefitText && (
           <div className="bg-gov-bg p-3 rounded border border-gov-border mb-5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gov-secondary block mb-1">
+              {t("schemes.indicative_benefit")}
+            </span>
             <div className="flex items-center text-xs font-semibold text-primary-dark">
               <CheckCircle className="w-4 h-4 text-primary mr-1.5 flex-shrink-0" aria-hidden="true" />
               <span>{benefitText}</span>
